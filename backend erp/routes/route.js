@@ -19,6 +19,7 @@ router.use("/", require("./academic.js"));
 router.use("/", require("./teachers.js"));
 router.use("/", require("./teacher-attendance.js"));
 router.use("/", require("./administration.js"));
+router.use("/", require("./time-table.js"));
 
 module.exports = router;
 

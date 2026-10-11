@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { FiAlertCircle, FiCheckCircle, FiEdit2, FiGrid, FiSave, FiSearch, FiTrash2, FiX } from "react-icons/fi";
 import "./ModernViewDelMark.css";
@@ -16,10 +16,22 @@ export default function ModernViewDelMark() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
+  const needsStream = ["11th", "12th"].includes(filters.class);
+
+  useEffect(() => {
+    if (!filters.class || (needsStream && !filters.stream)) { setSubjects([]); return; }
+    const capitalizedStream = filters.stream ? filters.stream.charAt(0).toUpperCase() + filters.stream.slice(1).toLowerCase() : '';
+    axios.get("http://localhost:3000/academic/class-subjects", { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }, params: { academicSession: filters.academicYear, className: filters.class, ...(capitalizedStream ? { stream: capitalizedStream } : {}) } })
+      .then((response) => {
+        const ordered = [...(response.data.subjects || [])].sort((a,b) => (subjectOrder.indexOf(a) < 0 ? 999 : subjectOrder.indexOf(a)) - (subjectOrder.indexOf(b) < 0 ? 999 : subjectOrder.indexOf(b)));
+        setSubjects(ordered);
+      })
+      .catch(() => setSubjects([]));
+  }, [filters.class, filters.stream, filters.academicYear, needsStream]);
 
   const changeFilter = ({ target: { name, value } }) => {
     setFilters((current) => ({ ...current, [name]: value, ...(name === "class" ? { stream: "" } : {}) }));
-    setStudents([]); setSubjects([]); setSubjectMeta({}); setEditingId(null); setStatus(null);
+    setStudents([]); setSubjectMeta({}); setEditingId(null); setStatus(null);
   };
 
   const loadMatrix = async () => {
@@ -27,10 +39,9 @@ export default function ModernViewDelMark() {
     setLoading(true); setStatus(null); setEditingId(null);
     try {
       const response = await axios.get("http://localhost:3000/view-marks-matrix", { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }, params: { class: filters.class, academicYear: filters.academicYear, examType: filters.examType, ...(filters.stream ? { stream: filters.stream } : {}) } });
-      const ordered = [...(response.data.subjects || [])].sort((a,b) => (subjectOrder.indexOf(a) < 0 ? 999 : subjectOrder.indexOf(a)) - (subjectOrder.indexOf(b) < 0 ? 999 : subjectOrder.indexOf(b)));
-      setSubjects(ordered); setSubjectMeta(response.data.subjectMeta || {}); setStudents(response.data.studentsMatrix || []);
+      setSubjectMeta(response.data.subjectMeta || {}); setStudents(response.data.studentsMatrix || []);
       if (!(response.data.studentsMatrix || []).length) setStatus({ type: "error", text: "Is selection mein koi student record nahi mila." });
-    } catch (error) { setStudents([]); setSubjects([]); setStatus({ type: "error", text: error.response?.data?.message || "Marks matrix load nahi hui." }); }
+    } catch (error) { setStudents([]); setStatus({ type: "error", text: error.response?.data?.message || "Marks matrix load nahi hui." }); }
     finally { setLoading(false); }
   };
 

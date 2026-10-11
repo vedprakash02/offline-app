@@ -4,7 +4,7 @@ import {
   FiAward, FiBarChart2, FiBookOpen, FiCalendar, FiCheckSquare, FiChevronDown,
   FiClipboard, FiDatabase, FiDollarSign, FiDownload, FiEdit3, FiFileText,
   FiGrid, FiImage, FiList, FiRefreshCw, FiSearch, FiSettings, FiShield,
-  FiUploadCloud, FiUserPlus, FiUsers,
+  FiUploadCloud, FiUserPlus, FiUsers, FiClock, FiPrinter,
 } from "react-icons/fi";
 import "./Sidebar.css";
 
@@ -17,7 +17,7 @@ export default function Sidebar() {
   const [staffOpen, setStaffOpen] = useState(false);
   const [studentOpen, setStudentOpen] = useState(false);
   const [attendanceOpen, setAttendanceOpen] = useState(false);
-  const [examOpen, setExamOpen] = useState(false);
+  const [examOpen, setExamOpen] = useState(true);
   const [feeOpen, setFeeOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
 
@@ -76,6 +76,8 @@ export default function Sidebar() {
     <Item to="/dashboard/id-qr-attendance" icon={FiCheckSquare}>QR Attendance (Students & Teachers)</Item>
     <Item to="/id-card-studio" icon={FiImage}>ID Card Studio</Item>
     <Item to="/dashboard/tc" icon={FiFileText}>TC & CC Generator</Item>
+    <Item to="/dashboard/admit-card" icon={FiPrinter}>Admit Card Generator</Item>
+    <Item to="/dashboard/time-table" icon={FiClock}>Time Table Setup</Item>
 
     {/* 6. SYSTEM ADMINISTRATION  */}
     <Group label="Administration" icon={FiShield} open={adminOpen} onToggle={() => setAdminOpen((v) => !v)}>

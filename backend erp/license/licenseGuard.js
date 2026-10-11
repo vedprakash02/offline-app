@@ -1,5 +1,5 @@
 const { getLicenseStatus } = require("./licenseService.js");
-const allowedMutations = new Set(["/login", "/signup", "/license/activate"]);
+const allowedMutations = new Set(["/login", "/signup", "/license/activate", "/time-table", "/academic/class-subjects"]);
 module.exports = (req, res, next) => {
   if (!["POST", "PUT", "PATCH", "DELETE"].includes(req.method) || allowedMutations.has(req.path)) return next();
   const status = getLicenseStatus();

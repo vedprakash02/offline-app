@@ -18,7 +18,8 @@ export default function UnitTestEntry() {
 
   useEffect(() => {
     if (!filters.class) return setSavedSubjects([]);
-    axios.get("http://localhost:3000/unit-test-subjects", { headers: auth(), params: { class: filters.class, academicYear: filters.academicYear, stream: filters.stream } }).then((res) => setSavedSubjects(res.data.subjects || [])).catch(() => setSavedSubjects([]));
+    const capitalizedStream = filters.stream ? filters.stream.charAt(0).toUpperCase() + filters.stream.slice(1).toLowerCase() : '';
+    axios.get("http://localhost:3000/academic/class-subjects", { headers: auth(), params: { academicSession: filters.academicYear, className: filters.class, ...(capitalizedStream ? { stream: capitalizedStream } : {}) } }).then((res) => setSavedSubjects(res.data.subjects || [])).catch(() => setSavedSubjects([]));
   }, [filters.class, filters.stream, filters.academicYear]);
 
   const change = (event) => { const { name, value } = event.target; setFilters((old) => ({ ...old, [name]: value, ...(name === "class" ? { stream: "", subjectName: "" } : {}) })); setStudents([]); setStatus(null); };

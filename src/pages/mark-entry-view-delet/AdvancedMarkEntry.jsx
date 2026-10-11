@@ -20,7 +20,7 @@ export default function AdvancedMarkEntry() {
 
   useEffect(() => {
     if (!filters.class) return setSavedSubjects([]);
-    axios.get("http://localhost:3000/exam-subjects", { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }, params: { class: filters.class, academicYear: filters.academicYear, stream: filters.stream } }).then((response) => setSavedSubjects(response.data.subjects || [])).catch(() => setSavedSubjects([]));
+    axios.get("http://localhost:3000/academic/class-subjects", { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }, params: { academicSession: filters.academicYear, className: filters.class, ...(filters.stream ? { stream: filters.stream } : {}) } }).then((response) => setSavedSubjects(response.data.subjects || [])).catch(() => setSavedSubjects([]));
   }, [filters.class, filters.stream, filters.academicYear]);
 
   const changeFilter = ({ target: { name, value } }) => {
