@@ -21,11 +21,12 @@ const userschema = new Schema({
 
   active: { type: Boolean, default: true },
   permissions: [{ type: String, trim: true }],
+  teacherId: { type: mongoose.Schema.Types.ObjectId, ref: "Teacher", default: null },
 
   role: {
     type: String,
-    enum: ["admin", "principal", "teacher", "accountant", "operator", "student"],
-    default: "student",
+    enum: ["admin", "teacher"],
+    default: "teacher",
      required: [true, "Role select karna compulsory hai."]
   },
 });

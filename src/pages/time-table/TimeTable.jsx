@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { FiClock, FiSave, FiAlertCircle, FiCheckCircle, FiEdit2, FiX, FiPlus } from "react-icons/fi";
-import { SCHOOL_CLASSES, STREAMS } from "../../academicConfig";
+import { SCHOOL_CLASSES } from "../../academicConfig";
 import "./TimeTable.css";
 
 const headers = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
@@ -11,10 +11,16 @@ const CLASS_RANGES = [
   { label: "6th - 8th", classes: ["6th", "7th", "8th"] },
   { label: "9th - 12th", classes: ["9th", "10th", "11th", "12th"] }
 ];
+const EXAM_TIME_GROUPS = [
+  { key: "primary", label: "Primary (1-5)" },
+  { key: "middle", label: "Middle (6-8)" },
+  { key: "higher", label: "Higher (9-12)" },
+];
 
 export default function TimeTable() {
   const activeSession = localStorage.getItem("activeSession") || "";
-  const [filters, setFilters] = useState({ examType: "", stream: "" });
+  const [filters, setFilters] = useState({ examType: "" });
+  const [examTimes, setExamTimes] = useState({ primary: "", middle: "", higher: "" });
   const [selectedClassRange, setSelectedClassRange] = useState("");
   const [scheduleData, setScheduleData] = useState({});
   const [editingCell, setEditingCell] = useState(null);
@@ -49,10 +55,7 @@ export default function TimeTable() {
       className: className
     };
     
-    if (isSenior && filters.stream) {
-      const capitalizedStream = filters.stream.charAt(0).toUpperCase() + filters.stream.slice(1).toLowerCase();
-      params.stream = capitalizedStream;
-    }
+    if (isSenior) params.allStreams = "true";
     
     try {
       const response = await axios.get("http://localhost:3000/academic/class-subjects", { headers: headers(), params });
@@ -153,7 +156,8 @@ export default function TimeTable() {
       const payload = {
         examType: filters.examType,
         academicYear: activeSession,
-        schedule: cleanSchedule
+        schedule: cleanSchedule,
+        examTimes
       };
       console.log("Sending to backend:", payload);
       
@@ -191,6 +195,7 @@ export default function TimeTable() {
         }
       });
       setScheduleData(response.data.schedule || {});
+      setExamTimes({ primary: "", middle: "", higher: "", ...(response.data.examTimes || {}) });
       if (!response.data.schedule || Object.keys(response.data.schedule).length === 0) {
         setStatus({ type: "error", text: "Koi time table nahi mila." });
       }
@@ -232,12 +237,18 @@ export default function TimeTable() {
 
   return (
     <main className="time-table-page">
+      <section className="time-table-setup-card">
       <header className="time-table-header">
-        <div className="time-table-icon"><FiClock /></div>
-        <div>
-          <span>EXAM MANAGEMENT</span>
-          <h2>Time Table Setup</h2>
-          <p>Class-wise exam schedule create aur manage karein</p>
+        <div className="global-exam-times" aria-label="Exam time by class category">
+          {EXAM_TIME_GROUPS.map((group) => {
+            const [start = "", end = ""] = String(examTimes[group.key] || "").split(" - ");
+            const updateTime = (index, value) => {
+              const values = [start, end];
+              values[index] = value;
+              setExamTimes((current) => ({ ...current, [group.key]: values[0] && values[1] ? `${values[0]} - ${values[1]}` : values.filter(Boolean)[0] || "" }));
+            };
+            return <label key={group.key}><span>{group.label}</span><div><input type="time" value={start} onChange={(e) => updateTime(0, e.target.value)} /><b>–</b><input type="time" value={end} onChange={(e) => updateTime(1, e.target.value)} /></div></label>;
+          })}
         </div>
         <div className="time-table-session">
           <span>Academic Session</span>
@@ -258,6 +269,7 @@ export default function TimeTable() {
         </div>
       )}
 
+      <div className="setup-controls">
       <section className="time-table-toolbar">
         <label>
           <span>Exam Type</span>
@@ -266,13 +278,6 @@ export default function TimeTable() {
             <option>Quarterly</option>
             <option>Half-Yearly</option>
             <option>Annual</option>
-          </select>
-        </label>
-        <label>
-          <span>Stream (11th/12th)</span>
-          <select name="stream" value={filters.stream} onChange={changeFilter}>
-            <option value="">Select stream</option>
-            {STREAMS.map((stream) => <option key={stream}>{stream}</option>)}
           </select>
         </label>
       </section>
@@ -305,6 +310,8 @@ export default function TimeTable() {
         <button type="button" onClick={saveTimeTable} disabled={saving || Object.keys(scheduleData).length === 0} className="save-btn">
           {savedStatus ? "Saved" : saving ? "Saving..." : "Save"}
         </button>
+      </section>
+      </div>
       </section>
 
       <section className="time-table-content">
@@ -399,7 +406,6 @@ export default function TimeTable() {
                                 className={className}
                                 date={date}
                                 currentSubject={subject}
-                                stream={filters.stream}
                                 onSave={(newSubject) => {
                                   updateCell(date, className, newSubject);
                                   setEditingCell(null);
@@ -441,15 +447,15 @@ export default function TimeTable() {
   );
 }
 
-function CellEditor({ className, date, currentSubject, stream, onSave, onCancel, onDelete }) {
+function CellEditor({ className, date, currentSubject, onSave, onCancel, onDelete }) {
   const [subjects, setSubjects] = useState([]);
-  const [selectedSubject, setSelectedSubject] = useState(currentSubject);
+  const [selectedSubjects, setSelectedSubjects] = useState(() => String(currentSubject || "").split(",").map((item) => item.trim()).filter(Boolean));
   const [loading, setLoading] = useState(false);
   const activeSession = localStorage.getItem("activeSession") || "";
 
   useEffect(() => {
     loadSubjects();
-  }, [className, stream]);
+  }, [className]);
 
   const loadSubjects = async () => {
     setLoading(true);
@@ -460,10 +466,7 @@ function CellEditor({ className, date, currentSubject, stream, onSave, onCancel,
         className: className
       };
       
-      if (isSenior && stream) {
-        const capitalizedStream = stream.charAt(0).toUpperCase() + stream.slice(1).toLowerCase();
-        params.stream = capitalizedStream;
-      }
+      if (isSenior) params.allStreams = "true";
       
       const response = await axios.get("http://localhost:3000/academic/class-subjects", { 
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }, 
@@ -471,15 +474,6 @@ function CellEditor({ className, date, currentSubject, stream, onSave, onCancel,
       });
       
       let loadedSubjects = response.data.subjects || [];
-      if (!loadedSubjects.length && response.data.classes) {
-        const classKey = Object.keys(response.data.classes).find(key => {
-          const [cls, streamVal] = key.split('|');
-          return cls === className && (!streamVal || streamVal.toLowerCase() === (stream || '').toLowerCase());
-        });
-        if (classKey) {
-          loadedSubjects = response.data.classes[classKey] || [];
-        }
-      }
       setSubjects(loadedSubjects);
     } catch (error) {
       console.error("Error loading subjects:", error);
@@ -494,18 +488,11 @@ function CellEditor({ className, date, currentSubject, stream, onSave, onCancel,
         <span>Loading...</span>
       ) : (
         <>
-          <select
-            value={selectedSubject}
-            onChange={(e) => setSelectedSubject(e.target.value)}
-            autoFocus
-          >
-            <option value="">Select subject</option>
-            {subjects.map((subject) => (
-              <option key={subject} value={subject}>{subject}</option>
-            ))}
-          </select>
+          <div className="subject-checkbox-list">
+            {subjects.map((subject) => <label key={subject}><input type="checkbox" checked={selectedSubjects.includes(subject)} onChange={() => setSelectedSubjects((current) => current.includes(subject) ? current.filter((item) => item !== subject) : [...current, subject])} />{subject}</label>)}
+          </div>
           <div className="editor-actions">
-            <button onClick={() => onSave(selectedSubject)} className="save-action">
+            <button onClick={() => onSave(selectedSubjects.join(", "))} className="save-action">
               Save
             </button>
             <button onClick={onDelete} className="delete-action">

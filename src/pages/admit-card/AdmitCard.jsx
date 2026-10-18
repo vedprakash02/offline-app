@@ -10,6 +10,8 @@ export default function AdmitCard() {
   const activeSession = localStorage.getItem("activeSession") || "";
   const [filters, setFilters] = useState({ class: "", stream: "", examType: "" });
   const [students, setStudents] = useState([]);
+  const [schedule, setSchedule] = useState({});
+  const [examTimes, setExamTimes] = useState({});
   const [schoolProfile, setSchoolProfile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
@@ -41,15 +43,23 @@ export default function AdmitCard() {
     if (needsStream && !filters.stream) {
       return setStatus({ type: "error", text: "11th/12th ke liye stream select karein." });
     }
+    if (!filters.examType) {
+      return setStatus({ type: "error", text: "Exam type select karein." });
+    }
     setLoading(true);
     setStatus(null);
     try {
       const capitalizedStream = filters.stream ? filters.stream.charAt(0).toUpperCase() + filters.stream.slice(1).toLowerCase() : '';
-      const response = await axios.get(`http://localhost:3000/fetch-students/${filters.class}`, {
+      const [response, timeTableResponse] = await Promise.all([
+        axios.get(`http://localhost:3000/fetch-students/${filters.class}`, {
         headers: headers(),
         params: { academicYear: activeSession, ...(capitalizedStream ? { stream: capitalizedStream } : {}) }
-      });
+        }),
+        axios.get("http://localhost:3000/time-table", { headers: headers(), params: { examType: filters.examType, academicYear: activeSession } }),
+      ]);
       setStudents(response.data.students || []);
+      setSchedule(timeTableResponse.data.schedule || {});
+      setExamTimes(timeTableResponse.data.examTimes || {});
       if (!response.data.students?.length) {
         setStatus({ type: "error", text: "Is class mein koi student nahi mila." });
       }
@@ -59,6 +69,30 @@ export default function AdmitCard() {
       setLoading(false);
     }
   };
+
+  const timeForClass = (className) => {
+    if (["1st", "2nd", "3rd", "4th", "5th"].includes(className)) return examTimes.primary || "";
+    if (["6th", "7th", "8th"].includes(className)) return examTimes.middle || "";
+    if (["9th", "10th", "11th", "12th"].includes(className)) return examTimes.higher || "";
+    return "";
+  };
+  const formatDate = (value) => {
+    const date = new Date(`${value}T00:00:00`);
+    return Number.isNaN(date.valueOf()) ? value : date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  };
+  const formatTime = (value) => String(value || "").split(" - ").map((item) => {
+    if (!item) return "";
+    const [hour, minute] = item.split(":");
+    const date = new Date(); date.setHours(Number(hour), Number(minute || 0), 0, 0);
+    return date.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
+  }).filter(Boolean).join(" – ");
+  const studentPhoto = (student) => {
+    const stored = String(student.imageUrl || student.profileImage || "").trim();
+    if (!stored) return "";
+    if (/^(https?:|data:|blob:)/i.test(stored)) return stored;
+    return `http://localhost:3000/uploads/${encodeURIComponent(stored)}`;
+  };
+  const scheduleRows = Object.entries(schedule).filter(([date, row]) => date && row?.[filters.class]).sort(([a], [b]) => a.localeCompare(b));
 
   const printAdmitCards = () => {
     const orientation = "portrait";
@@ -155,8 +189,8 @@ export default function AdmitCard() {
 
               <div className="admit-card-student">
                 <div className="student-photo">
-                  {student.imageUrl ? (
-                    <img src={student.imageUrl} alt={`${student.name}`} />
+                  {studentPhoto(student) ? (
+                    <img src={studentPhoto(student)} alt={`${student.name}`} />
                   ) : (
                     <div className="photo-placeholder">Photo</div>
                   )}
@@ -169,6 +203,11 @@ export default function AdmitCard() {
                   <p><strong>Father's Name:</strong> {student.fatherName || "—"}</p>
                 </div>
               </div>
+
+              <section className="admit-card-timetable">
+                <h4>Exam Time Table</h4>
+                {scheduleRows.length ? <table><thead><tr><th>Date</th><th>Subject</th><th>Time</th></tr></thead><tbody>{scheduleRows.map(([date, row]) => <tr key={date}><td>{formatDate(date)}</td><td>{row[filters.class]}</td><td>{formatTime(timeForClass(filters.class)) || "—"}</td></tr>)}</tbody></table> : <p>Is exam ke liye time table abhi set nahi hua hai.</p>}
+              </section>
 
               <div className="admit-card-footer">
                 <div className="exam-details">

@@ -29,7 +29,10 @@ router.post("/signup", async (req, res) => {
 
     // Fresh installation: the first account is securely bootstrapped as Admin.
     const isFirstAccount = (await User.countDocuments()) === 0;
-    const requestedRole = isFirstAccount ? "admin" : role;
+    const requestedRole = isFirstAccount ? "admin" : String(role).trim().toLowerCase();
+    if (!["admin", "teacher"].includes(requestedRole)) {
+      return res.status(400).json({ success: false, message: "Offline app me sirf Admin ya Teacher login allowed hai." });
+    }
     if (isFirstAccount) {
       await AllowedUser.findOneAndUpdate(
         { email: cleanEmail },
@@ -98,6 +101,9 @@ router.post("/login", async (req, res) => {
 
     if (!user) {
       return res.status(400).json({ success: false, message: "User nahi mila! Kripya sahi email dalein." });
+    }
+    if (!user.active || !["admin", "teacher"].includes(user.role)) {
+      return res.status(403).json({ success: false, message: "Is account ka login access allowed nahi hai." });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);

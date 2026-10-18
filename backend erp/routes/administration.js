@@ -5,11 +5,15 @@ const fs = require("fs");
 const path = require("path");
 const auth = require("../authorigetion/auth.js");
 const User = require("../models/user.js");
+const Teacher = require("../models/teacher.js");
+const AllowedUser = require("../models/alloweduser.js");
 const AuditLog = require("../models/auditLog.js");
+const bcrypt = require("bcryptjs");
 const EJSON = mongoose.mongo.BSON.EJSON;
 
 const router = express.Router();
-const backupUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 150 * 1024 * 1024 } });
+const BACKUP_FORMAT = "school-erp-backup-v2";
+const backupUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1024 * 1024 * 1024 } });
 const defaultUploadsDir = path.join(process.env.LOCALAPPDATA || path.dirname(process.execPath), "Vidya Prabandh Demo", "uploads");
 const sqliteBaseUrl = process.env.ID_BACKEND_URL || "http://127.0.0.1:4173";
 const idAdminKeyPath = path.join(process.env.LOCALAPPDATA || process.cwd(), "SIRF ID Attendance", "admin.key");
@@ -42,17 +46,28 @@ const uploadSnapshot = () => {
 
 router.get("/admin/backup", auth, requireAdmin, async (_req, res) => {
   try {
+    const sqlite = await sqliteRequest("/api/backup");
+    if (sqlite.available !== true || !sqlite.tables) {
+      return res.status(503).json({ message: "Full backup nahi bana: ID/QR SQLite backend available nahi hai. Pehle ID backend start karke phir backup lein." });
+    }
+    const mongo = await mongoSnapshot();
+    const uploads = uploadSnapshot();
     const backup = {
-      format: "school-erp-backup-v1",
+      format: BACKUP_FORMAT,
       createdAt: new Date().toISOString(),
       mongoDatabase: mongoose.connection.name,
-      mongo: await mongoSnapshot(),
-      sqlite: await sqliteRequest("/api/backup"),
-      uploads: uploadSnapshot(),
+      mongo,
+      sqlite,
+      uploads,
+      verification: {
+        mongoCollections: Object.fromEntries(Object.entries(mongo).map(([name, documents]) => [name, documents.length])),
+        sqliteTables: Object.fromEntries(Object.entries(sqlite.tables).map(([name, rows]) => [name, Array.isArray(rows) ? rows.length : 0])),
+        uploadFiles: uploads.length,
+      },
     };
     const stamp = backup.createdAt.replace(/[:.]/g, "-");
     res.setHeader("Content-Disposition", `attachment; filename=school-erp-backup-${stamp}.json`);
-    res.type("application/json").send(EJSON.stringify({ ...backup, format: "school-erp-backup-v2" }, { relaxed: false }));
+    res.type("application/json").send(EJSON.stringify(backup, { relaxed: false }));
   } catch (error) {
     res.status(500).json({ message: `Backup create nahi hua: ${error.message}` });
   }
@@ -62,16 +77,22 @@ router.post("/admin/restore", auth, requireAdmin, backupUpload.single("backup"),
   try {
     if (req.body?.confirmation !== "RESTORE SCHOOL DATA") return res.status(400).json({ message: "Restore confirmation phrase sahi nahi hai." });
     if (!req.file) return res.status(400).json({ message: "Backup JSON file select karein." });
-    const backup = JSON.parse(req.file.buffer.toString("utf8"));
-    if (backup.format !== "school-erp-backup-v1" || !backup.mongo) return res.status(400).json({ message: "Invalid School ERP backup file." });
-    if (backup.sqlite?.tables && !getIdAdminKey()) return res.status(503).json({ message: "Safe SQLite restore ke liye ID backend ko ek baar start karein, taki local restore security key taiyar ho. Koi data change nahi hua." });
+    const backup = EJSON.parse(req.file.buffer.toString("utf8"));
+    if (!["school-erp-backup-v1", BACKUP_FORMAT].includes(backup.format) || !backup.mongo || !backup.sqlite?.tables || !Array.isArray(backup.uploads)) return res.status(400).json({ message: "Invalid ya incomplete School ERP backup file." });
+    if (!getIdAdminKey()) return res.status(503).json({ message: "Safe SQLite restore ke liye ID backend ko ek baar start karein, taki local restore security key taiyar ho. Koi data change nahi hua." });
 
     const safetyDirectory = path.join(process.cwd(), "backups");
     fs.mkdirSync(safetyDirectory, { recursive: true });
-    const safety = { format: "school-erp-backup-v1", createdAt: new Date().toISOString(), reason: "automatic-pre-restore", mongo: await mongoSnapshot(), sqlite: await sqliteRequest("/api/backup"), uploads: [] };
-    fs.writeFileSync(path.join(safetyDirectory, `pre-restore-${Date.now()}.json`), JSON.stringify(safety));
+    const currentSqlite = await sqliteRequest("/api/backup");
+    if (currentSqlite.available !== true || !currentSqlite.tables) return res.status(503).json({ message: "Current SQLite data ka safety backup nahi ban saka. ID backend start karke phir restore karein." });
+    const safety = { format: BACKUP_FORMAT, createdAt: new Date().toISOString(), reason: "automatic-pre-restore", mongo: await mongoSnapshot(), sqlite: currentSqlite, uploads: uploadSnapshot() };
+    fs.writeFileSync(path.join(safetyDirectory, `pre-restore-${Date.now()}.json`), EJSON.stringify(safety, { relaxed: false }));
 
     const existing = new Set(await safeCollections());
+    const incoming = new Set(Object.keys(backup.mongo).filter((name) => /^[a-zA-Z0-9_.-]+$/.test(name)));
+    for (const name of existing) {
+      if (!incoming.has(name)) await mongoose.connection.db.collection(name).deleteMany({});
+    }
     for (const [name, documents] of Object.entries(backup.mongo)) {
       if (!/^[a-zA-Z0-9_.-]+$/.test(name) || !Array.isArray(documents)) continue;
       const collection = mongoose.connection.db.collection(name);
@@ -85,6 +106,10 @@ router.post("/admin/restore", auth, requireAdmin, backupUpload.single("backup"),
     }
     const uploadsDirectory = process.env.UPLOADS_DIR || defaultUploadsDir;
     fs.mkdirSync(uploadsDirectory, { recursive: true });
+    const backupFiles = new Set((backup.uploads || []).map((file) => path.basename(String(file.name || "")).trim()).filter(Boolean));
+    for (const entry of fs.readdirSync(uploadsDirectory, { withFileTypes: true })) {
+      if (entry.isFile() && !backupFiles.has(entry.name)) fs.unlinkSync(path.join(uploadsDirectory, entry.name));
+    }
     for (const file of backup.uploads || []) {
       const safeName = path.basename(String(file.name || ""));
       if (safeName && file.data) fs.writeFileSync(path.join(uploadsDirectory, safeName), Buffer.from(file.data, "base64"));
@@ -126,18 +151,48 @@ router.get("/admin/student-validation", auth, async (req, res) => {
 });
 
 router.get("/admin/users", auth, requireAdmin, async (_req, res) => {
-  const users = await User.find({}).select("username email role active permissions createdAt").sort({ username: 1 }).lean();
+  const users = await User.find({ role: { $in: ["admin", "teacher"] } }).select("username email role active permissions teacherId createdAt").sort({ username: 1 }).lean();
   res.json({ users });
+});
+router.post("/admin/users", auth, requireAdmin, async (req, res) => {
+  try {
+    const { username, email, password, role, teacherId = null } = req.body;
+    const cleanRole = String(role || "").trim().toLowerCase();
+    const cleanEmail = String(email || "").trim().toLowerCase();
+    const cleanUsername = String(username || "").trim();
+    if (!["admin", "teacher"].includes(cleanRole) || !cleanUsername || !/^\S+@\S+\.\S+$/.test(cleanEmail) || String(password || "").length < 8) return res.status(422).json({ message: "Admin/Teacher role, username, valid email aur 8+ character password required hai." });
+    if (await User.exists({ email: cleanEmail })) return res.status(409).json({ message: "Is email ka login pehle se bana hua hai." });
+    let linkedTeacher = null;
+    if (cleanRole === "teacher") {
+      if (!teacherId) return res.status(422).json({ message: "Teacher login ke liye teacher select karein." });
+      linkedTeacher = await Teacher.findOne({ _id: teacherId, status: "Active" }).lean();
+      if (!linkedTeacher) return res.status(422).json({ message: "Selected teacher active nahi hai." });
+      if (await User.exists({ teacherId })) return res.status(409).json({ message: "Is teacher ka login pehle se bana hua hai." });
+    }
+    const user = await User.create({ username: cleanUsername, email: cleanEmail, password: await bcrypt.hash(password, 10), role: cleanRole, teacherId: linkedTeacher?._id || null, active: true, permissions: [] });
+    await AllowedUser.findOneAndUpdate({ email: cleanEmail }, { username: cleanUsername, email: cleanEmail, role: cleanRole }, { upsert: true, new: true, setDefaultsOnInsert: true });
+    res.status(201).json({ message: `${cleanRole === "admin" ? "Admin" : "Teacher"} login create ho gaya.`, user: await User.findById(user._id).select("username email role active permissions teacherId createdAt").lean() });
+  } catch (error) { res.status(500).json({ message: error.message }); }
 });
 router.put("/admin/users/:id/access", auth, requireAdmin, async (req, res) => {
   try {
-    const roles = ["admin", "principal", "teacher", "accountant", "operator", "student"];
+    const roles = ["admin", "teacher"];
     const { role, active, permissions = [] } = req.body;
     if (!roles.includes(role) || !Array.isArray(permissions)) return res.status(400).json({ message: "Valid role aur permissions required hain." });
     if (String(req.params.id) === String(req.user.id) && active === false) return res.status(400).json({ message: "Aap apna admin account inactive nahi kar sakte." });
     const user = await User.findByIdAndUpdate(req.params.id, { role, active: active !== false, permissions: permissions.map(String).slice(0, 50) }, { new: true }).select("username email role active permissions");
     if (!user) return res.status(404).json({ message: "User nahi mila." });
     res.json({ success: true, user, message: "User access update ho gaya. Naya role next request se apply hoga." });
+  } catch (error) { res.status(500).json({ message: error.message }); }
+});
+router.put("/admin/users/:id/password", auth, requireAdmin, async (req, res) => {
+  try {
+    const password = String(req.body?.password || "");
+    if (password.length < 8) return res.status(422).json({ message: "Password kam se kam 8 characters ka hona chahiye." });
+    const user = await User.findOne({ _id: req.params.id, role: { $in: ["admin", "teacher"] } });
+    if (!user) return res.status(404).json({ message: "Login account nahi mila." });
+    user.password = await bcrypt.hash(password, 10); await user.save();
+    res.json({ success: true, message: "Naya password save ho gaya." });
   } catch (error) { res.status(500).json({ message: error.message }); }
 });
 router.get("/admin/audit-logs", auth, requireAdmin, async (req, res) => {

@@ -11,7 +11,7 @@ import EditStudent from "./pages/add-edit-list-student/ModernEditStudent";
 import ProtectedRoute from "./component/protected_rout/ProtectedRoute";
 import Dashboard from "./component/dashboard/Dashboard";
 import AcademicSubjects from "./pages/academic-subjects/AcademicSubjects";
-import AdmitCardWrapper from "./pages/admit-card/AdmitCardWrapper";
+import AdmitCard from "./pages/admit-card/AdmitCard";
 import TimeTable from "./pages/time-table/TimeTable";
 
 
@@ -130,7 +130,7 @@ function App() {
               <Route path="student-validation" element={<StudentValidation />} />
               <Route path="student-sync" element={<StudentSync />} />
               <Route path="user-access" element={<UserAccess />} />
-              <Route path="admit-card" element={<AdmitCardWrapper />} />
+              <Route path="admit-card" element={<AdmitCard />} />
               <Route path="time-table" element={<TimeTable />} />
             
             </Route>

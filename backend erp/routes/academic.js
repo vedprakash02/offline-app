@@ -9,7 +9,7 @@ const canManageAcademicSetup = (user) => ["admin", "principal", "teacher"].inclu
 
 router.get("/academic/class-subjects", auth, async (req, res) => {
   try {
-    const { academicSession, className, stream = "" } = req.query;
+    const { academicSession, className, stream = "", allStreams = "" } = req.query;
     if (!isValidAcademicSession(academicSession)) {
       return res.status(400).json({ message: "Valid academic session required hai." });
     }
@@ -19,6 +19,19 @@ router.get("/academic/class-subjects", auth, async (req, res) => {
     }
 
     if (className) {
+      // Timetable setup for 11th/12th must offer every subject configured for
+      // the class, regardless of its stream.  This lets one date contain
+      // subjects from Science, Commerce and Arts together.
+      if (seniorClasses.has(className) && String(allStreams) === "true") {
+        const records = await ClassSubject.find({ academicSession, className }).lean();
+        const subjects = [...new Map(records
+          .flatMap((record) => record.subjects || [])
+          .map((subject) => [String(subject).trim().toLowerCase(), String(subject).trim()]))
+          .values()]
+          .filter(Boolean)
+          .sort((a, b) => a.localeCompare(b));
+        return res.json({ subjects });
+      }
       const record = await ClassSubject.findOne({
         academicSession,
         className,

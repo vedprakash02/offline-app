@@ -8,6 +8,7 @@ const TimeTableSchema = new mongoose.Schema({
   examType: { type: String, required: true },
   academicYear: { type: String, required: true },
   schedule: { type: Object, default: {} },
+  examTimes: { type: Object, default: {} },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -28,7 +29,7 @@ router.get("/time-table", auth, async (req, res) => {
       academicYear
     }).lean();
 
-    return res.json({ schedule: record?.schedule || {} });
+    return res.json({ schedule: record?.schedule || {}, examTimes: record?.examTimes || {} });
   } catch (error) {
     console.error("Time table load nahi hua:", error);
     return res.status(500).json({ message: "Time table load nahi hua." });
@@ -38,7 +39,7 @@ router.get("/time-table", auth, async (req, res) => {
 // POST /time-table - Save time table
 router.post("/time-table", auth, async (req, res) => {
   try {
-    const { examType, academicYear, schedule } = req.body;
+    const { examType, academicYear, schedule, examTimes = {} } = req.body;
     
     if (!examType || !academicYear) {
       return res.status(400).json({ message: "Exam type aur academic year required hai." });
@@ -53,6 +54,7 @@ router.post("/time-table", auth, async (req, res) => {
       { 
         $set: { 
           schedule,
+          examTimes: typeof examTimes === "object" && !Array.isArray(examTimes) ? examTimes : {},
           updatedAt: new Date()
         } 
       },
@@ -61,7 +63,8 @@ router.post("/time-table", auth, async (req, res) => {
 
     return res.json({
       message: "Time table save ho gaya.",
-      schedule: record.schedule
+      schedule: record.schedule,
+      examTimes: record.examTimes || {}
     });
   } catch (error) {
     console.error("Time table save nahi hua:", error);

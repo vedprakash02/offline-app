@@ -546,3 +546,66 @@
     min-width: 80px;
   }
 }
+/* One global exam time per class category; it is reused on every exam date. */
+.global-exam-times { margin-left:auto; display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; padding:9px 11px; border:1px solid #b9ded8; border-radius:12px; background:linear-gradient(135deg,#effdf9,#f8fffd); box-shadow:0 5px 14px rgba(7,92,92,.08); }
+.global-exam-times::before { content:"Set once · applied to every exam date"; width:100%; color:#55817c; font-size:10px; font-weight:700; letter-spacing:.2px; }
+.global-exam-times label { display:grid; gap:4px; color:#075c5c; font-size:12px; font-weight:800; }
+.global-exam-times label > div { display:flex; align-items:center; gap:4px; }
+.global-exam-times input { width:82px; min-height:32px; border:1px solid #9fcfc8; border-radius:7px; padding:3px 5px; background:#fff; color:#17324d; font-weight:700; }
+.global-exam-times b { color:#64748b; }
+.subject-checkbox-list { display:grid; grid-template-columns:repeat(2,minmax(110px,1fr)); gap:6px; max-height:165px; overflow:auto; padding:5px; text-align:left; }
+.subject-checkbox-list label { display:flex; gap:6px; align-items:center; font-size:12px; cursor:pointer; }
+.subject-checkbox-list input { accent-color:#078477; }
+@media (max-width:900px) { .global-exam-times { margin-left:0; width:100%; } }
+@media (max-width:560px) { .global-exam-times { display:grid; grid-template-columns:1fr; } .global-exam-times label > div { justify-content:space-between; } }
+
+/* Keep setup in one clean card and the schedule in the second card. */
+.time-table-page { background:#f3f7fb; padding:22px; }
+.time-table-setup-card,.time-table-content { max-width:1120px; margin:0 auto 18px; border:1px solid #d9e6ed; border-radius:16px; background:#fff; box-shadow:0 10px 25px rgba(15,23,42,.06); }
+.time-table-setup-card { padding:20px 22px; }
+.time-table-setup-card .time-table-header { margin:0; padding:0 0 17px; border:0; border-radius:0; background:transparent; box-shadow:none; }
+.time-table-setup-card .time-table-icon { width:48px; height:48px; border-radius:13px; font-size:23px; background:linear-gradient(135deg,#078477,#0eaaa3); box-shadow:none; }
+.time-table-setup-card .time-table-header > div > h2 { margin:2px 0 3px; font-size:24px; color:#12344d; background:none; -webkit-text-fill-color:initial; }
+.time-table-setup-card .time-table-header > div > span { color:#078477; }
+.time-table-setup-card .time-table-session { background:#f0fdfa; border:1px solid #a8d8d2; box-shadow:none; color:#075c5c; }
+.time-table-setup-card .time-table-session > span,.time-table-setup-card .time-table-session > strong { color:#075c5c; }
+.time-table-setup-card .time-table-toolbar,.time-table-setup-card .class-range-filters,.time-table-setup-card .time-table-actions { margin:0; padding:15px 0; border:0; border-radius:0; background:transparent; box-shadow:none; }
+.time-table-setup-card .time-table-toolbar { border-top:1px solid #e2edf2; display:flex; align-items:end; }
+.time-table-setup-card .class-range-filters { border-top:1px solid #e2edf2; }
+.time-table-setup-card .time-table-actions { border-top:1px solid #e2edf2; padding-bottom:0; }
+.time-table-setup-card .time-table-toolbar > label > span { color:#075c5c; }
+.time-table-setup-card .time-table-toolbar > label > select { border:1px solid #b9d3d9; box-shadow:none; }
+.time-table-setup-card .filter-btn.active,.time-table-setup-card .add-row-btn,.time-table-setup-card .save-btn { background:#078477; border-color:#078477; }
+.time-table-setup-card .save-btn:disabled { background:#b8d9d5; border-color:#b8d9d5; }
+.time-table-content { padding:20px 22px; }
+.time-table-content::before { content:"Exam Time Table"; display:block; padding-bottom:14px; color:#12344d; font-size:20px; font-weight:800; border-bottom:1px solid #e2edf2; }
+.time-table-content .time-table-grid { padding-top:16px; }
+@media(max-width:700px){.time-table-page{padding:12px}.time-table-setup-card,.time-table-content{padding:16px}.time-table-setup-card .time-table-header{align-items:flex-start}.time-table-setup-card .time-table-session{margin-left:0}.time-table-setup-card .time-table-actions{justify-content:stretch}.time-table-setup-card .time-table-actions button{flex:1}}
+
+/* Compact desktop setup: title + category time on top, all working controls below. */
+.time-table-setup-card { padding:16px 22px; }
+.time-table-setup-card .time-table-header { gap:12px; padding-bottom:12px; align-items:center; }
+.time-table-setup-card .time-table-icon { width:42px; height:42px; font-size:20px; }
+.time-table-setup-card .time-table-header > div > h2 { font-size:21px; }
+.time-table-setup-card .time-table-header > div > p { font-size:12px; }
+.time-table-setup-card .time-table-session { padding:7px 10px; min-width:118px; }
+.time-table-setup-card .time-table-session > strong { font-size:14px; }
+.time-table-setup-card .time-table-session > span,.time-table-setup-card .time-table-session > strong { display:block; text-align:center; }
+.time-table-setup-card .time-table-session > span { margin-bottom:2px; font-size:10px; letter-spacing:.7px; }
+.global-exam-times { flex:1; margin-left:10px; padding:7px 10px; gap:8px; align-items:center; flex-wrap:nowrap; }
+.global-exam-times::before { display:none; }
+.global-exam-times label { display:flex; align-items:center; gap:5px; white-space:nowrap; font-size:11px; }
+.global-exam-times label > div { gap:3px; }
+.global-exam-times input { width:68px; min-height:28px; font-size:11px; }
+.setup-controls { display:grid; grid-template-columns:200px minmax(360px,1fr) auto; align-items:end; gap:16px; padding-top:11px; border-top:1px solid #e2edf2; }
+.time-table-setup-card .time-table-toolbar,.time-table-setup-card .class-range-filters,.time-table-setup-card .time-table-actions { padding:0; border:0; }
+.time-table-setup-card .time-table-toolbar { min-width:0; }
+.time-table-setup-card .time-table-toolbar > label { min-width:0; width:100%; }
+.time-table-setup-card .time-table-toolbar > label > select { padding:8px 10px; min-height:38px; }
+.time-table-setup-card .class-range-filters { gap:8px; }
+.time-table-setup-card .filter-buttons { gap:5px; }
+.time-table-setup-card .filter-btn { padding:8px 11px; }
+.time-table-setup-card .time-table-actions { gap:8px; justify-content:flex-end; white-space:nowrap; }
+.time-table-setup-card .add-row-btn,.time-table-setup-card .save-btn { min-height:38px; padding:8px 12px; }
+@media(max-width:1050px){.global-exam-times{flex-wrap:wrap}.time-table-setup-card .time-table-header{align-items:flex-start}.setup-controls{grid-template-columns:190px 1fr}.time-table-setup-card .time-table-actions{grid-column:2;justify-content:flex-start}}
+@media(max-width:700px){.global-exam-times{margin-left:0;flex-wrap:wrap}.setup-controls{grid-template-columns:1fr;gap:12px}.time-table-setup-card .time-table-actions{grid-column:auto;justify-content:stretch}.time-table-setup-card .class-range-filters{align-items:flex-start;flex-direction:column}}
