@@ -51,3 +51,27 @@ admin-ui-package-stage/
 *.njsproj
 *.sln
 *.sw?
+
+# Local artifacts; source documentation and project instructions remain tracked
+*.zip
+*.tmp
+*.sqlite
+*.sqlite3
+build-verify/
+release-fixes/
+.cache/
+.claude/
+.codex/
+.cursor/
+build-error.txt
+build-check-output.txt
+build-result.txt
+build-status.tmp
+eslint-result.txt
+/backand@1.0.0
+/cd
+/esbuild
+/latest@0.0.0
+/node
+/npm
+/sirf-id-attendance-api@1.0.0
