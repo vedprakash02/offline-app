@@ -21,7 +21,7 @@ const QrTab = ({ config, updateConfig }) => {
         {range("Up / Down", "qrTop", 0, config.orientation === "landscape" ? 190 : 300)}
       </PositionGroup>
       <p style={{ margin: 0, color: "var(--idc-muted)", fontSize: 12 }}>
-        Left / Right value badhane par QR right jayega. Up / Down value badhane par QR neeche jayega.
+        Increasing Left / Right moves the QR code right. Increasing Up / Down moves the QR code down.
       </p>
       <button
         className="toolbar-btn qr-reset-button"
@@ -31,7 +31,7 @@ const QrTab = ({ config, updateConfig }) => {
           : { qrSize: 46, qrLeft: 170, qrTop: 250 })}
       >
         <span className="qr-reset-icon" aria-hidden="true">↺</span>
-        <span><strong>Reset QR position</strong><small>Default size aur placement restore karein</small></span>
+        <span><strong>Reset QR position</strong><small>Restore default size and placement</small></span>
       </button>
     </div>
   );

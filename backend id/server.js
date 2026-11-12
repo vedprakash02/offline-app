@@ -112,13 +112,13 @@ const mutationLicenseStatus = async () => {
     return cachedErpLicense;
   } catch {
     if (cachedErpLicense.valid && now <= cachedExpiry && now - cachedErpLicense.checkedAt < 7 * 24 * 60 * 60 * 1000) return cachedErpLicense;
-    return { valid: false, code: "LICENSE_CHECK_UNAVAILABLE", message: "ERP license verify nahi hua. Main ERP backend start karein." };
+    return { valid: false, code: "LICENSE_CHECK_UNAVAILABLE", message: "Could not verify the ERP license. Start the main ERP backend." };
   }
 };
 const api = async (req, res, url) => {
   if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
     const license = await mutationLicenseStatus();
-    if (!license.valid) return json(res, 402, { success: false, readOnly: true, code: license.code || "LICENSE_REQUIRED", message: license.message || "Valid ERP license required hai." });
+    if (!license.valid) return json(res, 402, { success: false, readOnly: true, code: license.code || "LICENSE_REQUIRED", message: license.message || "A valid ERP license is required." });
   }  if (req.method === "GET" && url.pathname === "/api/health") {
     return json(res, 200, { ok: true, service: "SIRF ID Attendance" });
   }
@@ -133,12 +133,12 @@ const api = async (req, res, url) => {
   }
   if (req.method === "POST" && url.pathname === "/api/teachers/sync") {
     const { teachers } = await readBody(req);
-    if (!Array.isArray(teachers)) return json(res, 400, { message: "Valid teacher list chahiye." });
+    if (!Array.isArray(teachers)) return json(res, 400, { message: "A valid teacher list is required." });
     const upsert = db.prepare(`INSERT INTO teachers (employee_id,name,designation,image,active,updated_at) VALUES (?,?,?,?,1,?) ON CONFLICT(employee_id) DO UPDATE SET name=excluded.name,designation=excluded.designation,image=excluded.image,active=1,updated_at=excluded.updated_at`);
     const now = new Date().toISOString(); db.exec("BEGIN");
     try { db.prepare("UPDATE teachers SET active = 0").run(); for (const teacher of teachers) { const id=normaliseId(teacher.employeeId); if(id&&String(teacher.name||"").trim()) upsert.run(id,String(teacher.name).trim(),String(teacher.designation||"").trim(),String(teacher.image||"").trim(),now); } db.exec("COMMIT"); }
     catch(error){db.exec("ROLLBACK");throw error;}
-    return json(res,200,{message:`${teachers.length} teachers SQLite scanner par sync ho gaye.`,count:teachers.length});
+    return json(res,200,{message:`${teachers.length} teachers synced to the SQLite scanner.`,count:teachers.length});
   }
   if (req.method === "GET" && url.pathname === "/api/students") {
     return json(res, 200, {
@@ -152,10 +152,10 @@ const api = async (req, res, url) => {
   if (req.method === "POST" && url.pathname === "/api/students/sync") {
     const { students, academicSession } = await readBody(req);
     if (!Array.isArray(students) || !students.length)
-      return json(res, 400, { message: "Sync ke liye student list chahiye." });
+      return json(res, 400, { message: "A student list is required to sync." });
     const session = String(academicSession || "").trim();
     if (!/^\d{4}-\d{4}$/.test(session))
-      return json(res, 400, { message: "Valid academic session chahiye." });
+      return json(res, 400, { message: "A valid academic session is required." });
     const upsert =
       db.prepare(`INSERT INTO students (student_id,name,class_name,father_name,phone,academic_session,active,updated_at)
       VALUES (?,?,?,?,?,?,1,?) ON CONFLICT(student_id) DO UPDATE SET name=excluded.name,class_name=excluded.class_name,
@@ -200,7 +200,7 @@ const api = async (req, res, url) => {
       throw error;
     }
     return json(res, 200, {
-      message: `${saved} students server par sync ho gaye.`,
+      message: `${saved} students synced to the server.`,
       count: saved,
     });
   }
@@ -222,14 +222,14 @@ const api = async (req, res, url) => {
       throw error;
     }
     return json(res, 200, {
-      message: `${studentCount} local SQLite students aur ${attendanceCount} QR attendance records reset ho gaye. MongoDB data change nahi hua.`,
+      message: `Reset ${studentCount} local SQLite students and ${attendanceCount} QR attendance records. MongoDB data has not been changed.`,
       studentCount,
       attendanceCount,
     });
   }
   if (req.method === "GET" && url.pathname === "/api/backup") {
     const remote = req.socket.remoteAddress || "";
-    if (!["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(remote)) return json(res, 403, { message: "Backup sirf local ERP server le sakta hai." });
+    if (!["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(remote)) return json(res, 403, { message: "Only the local ERP server can create a backup." });
     return json(res, 200, { available: true, format: "sirf-id-sqlite-v1", createdAt: new Date().toISOString(), tables: { students: db.prepare("SELECT * FROM students").all(), attendance: db.prepare("SELECT * FROM attendance").all(), scan_sessions: db.prepare("SELECT * FROM scan_sessions").all(), school_calendar: db.prepare("SELECT * FROM school_calendar").all() } });
   }
   if (req.method === "POST" && url.pathname === "/api/restore") {
@@ -237,7 +237,7 @@ const api = async (req, res, url) => {
     const expectedKey = localAdminKey;
     const suppliedKey = String(req.headers["x-erp-admin-key"] || "");
     const validKey = expectedKey && suppliedKey && expectedKey.length === suppliedKey.length && timingSafeEqual(Buffer.from(expectedKey), Buffer.from(suppliedKey));
-    if (!["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(remote) || !validKey) return json(res, 403, { message: "Authenticated local ERP restore required hai." });
+    if (!["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(remote) || !validKey) return json(res, 403, { message: "An authenticated local ERP restore is required." });
     const payload = await readBody(req);
     if (payload.confirmation !== "RESTORE SQLITE DATA" || !payload.tables) return json(res, 400, { message: "Invalid SQLite restore request." });
     const tableOrder = ["students", "scan_sessions", "school_calendar", "attendance"];
@@ -253,10 +253,10 @@ const api = async (req, res, url) => {
         }
       }
       db.exec("COMMIT");
-      return json(res, 200, { success: true, message: "SQLite data restore ho gaya." });
+      return json(res, 200, { success: true, message: "SQLite data restored." });
     } catch (error) {
       try { db.exec("ROLLBACK"); } catch {}
-      return json(res, 500, { message: `SQLite restore nahi hua: ${error.message}` });
+      return json(res, 500, { message: `Could not restore SQLite data: ${error.message}` });
     }
   }
   if (req.method === "GET" && url.pathname === "/api/attendance") {
@@ -267,7 +267,7 @@ const api = async (req, res, url) => {
     const className = String(url.searchParams.get("className") || "").trim();
     const month = String(url.searchParams.get("month") || "").trim();
     if (!className || !/^\d{4}-\d{2}$/.test(month))
-      return json(res, 400, { message: "Class aur valid month chahiye." });
+      return json(res, 400, { message: "A class and valid month are required." });
 
     const monthStart = `${month}-01`;
     const monthEndDate = new Date(`${monthStart}T00:00:00Z`);
@@ -335,27 +335,27 @@ const api = async (req, res, url) => {
     const date = String(body.date || "").trim();
     const className = String(body.className || "").trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !className || typeof body.isHoliday !== "boolean")
-      return json(res, 400, { message: "Valid date, class aur holiday status chahiye." });
+      return json(res, 400, { message: "A valid date, class and holiday status are required." });
     db.prepare(`INSERT INTO school_calendar (calendar_date,class_name,is_holiday) VALUES (?,?,?)
       ON CONFLICT(calendar_date,class_name) DO UPDATE SET is_holiday=excluded.is_holiday`)
       .run(date, className, body.isHoliday ? 1 : 0);
-    return json(res, 200, { message: `${date} ko ${body.isHoliday ? "holiday" : "working day"} mark kar diya.`, date, className, isHoliday: body.isHoliday });
+    return json(res, 200, { message: `${date} marked as ${body.isHoliday ? "holiday" : "working day"}.`, date, className, isHoliday: body.isHoliday });
   }
   if (req.method === "POST" && url.pathname === "/api/attendance/scan") {
     const body = await readBody(req);
     const teacherId = teacherIdFromQr(body.qrValue);
     if (teacherId) {
       const teacher = db.prepare("SELECT employee_id AS employeeId,name,designation FROM teachers WHERE employee_id = ? AND active = 1").get(teacherId);
-      if (!teacher) return json(res,404,{message:`Teacher ID ${teacherId} scanner roster mein nahi mili. Pehle teacher sync karein.`});
+      if (!teacher) return json(res,404,{message:`Teacher ID ${teacherId} was not found in the scanner roster. Sync teachers first.`});
       const now=new Date(); const date=localDate(now); const existing=db.prepare("SELECT id,check_in_at AS checkInAt,check_out_at AS checkOutAt FROM teacher_attendance WHERE employee_id=? AND attendance_date=?").get(teacherId,date);
       if (!existing) db.prepare("INSERT INTO teacher_attendance (employee_id,attendance_date,check_in_at,source,operator_name) VALUES (?,?,?,?,?)").run(teacherId,date,now.toISOString(),["camera","hardware","photo","manual"].includes(body.source)?body.source:"manual",String(body.operatorName||"").trim());
       else if (!existing.checkOutAt) db.prepare("UPDATE teacher_attendance SET check_out_at=?,source=?,operator_name=?,sync_status='pending',synced_at=NULL,sync_error=NULL WHERE id=?").run(now.toISOString(),body.source||"manual",String(body.operatorName||"").trim(),existing.id);
-      else return json(res,409,{duplicate:true,teacher,message:`${teacher.name} ka check-in aur check-out aaj complete hai.`});
+      else return json(res,409,{duplicate:true,teacher,message:`Check-in and check-out for ${teacher.name} are already complete today.`});
       return json(res,201,{teacher,teacherScan:{action:existing?"check-out":"check-in",time:localTime(now.toISOString())},message:`${teacher.name} ${existing?"check-out":"check-in"}: ${localTime(now.toISOString())}`,...dailyAttendance(date)});
     }
     const studentId = idFromQr(body.qrValue);
     if (!studentId)
-      return json(res, 400, { message: "QR/Student ID blank hai." });
+      return json(res, 400, { message: "The QR code or Student ID is blank." });
     const student = db
       .prepare(
         "SELECT student_id AS studentId, name, class_name AS className, academic_session AS academicSession FROM students WHERE student_id = ? AND active = 1",
@@ -363,7 +363,7 @@ const api = async (req, res, url) => {
       .get(studentId);
     if (!student)
       return json(res, 404, {
-        message: `Student ID ${studentId} server par nahi mili.`,
+        message: `Student ID ${studentId} was not found on the server.`,
       });
     const now = new Date();
     const date = localDate(now);
@@ -386,7 +386,7 @@ const api = async (req, res, url) => {
         return json(res, 409, {
           duplicate: true,
           student,
-          message: `${student.name} ki attendance aaj pehle hi lag chuki hai.`,
+          message: `Attendance for ${student.name} has already been marked today.`,
         });
       throw error;
     }
@@ -407,11 +407,11 @@ const api = async (req, res, url) => {
     ];
     if (!markerIds.length)
       return json(res, 400, {
-        message: "Whole-class scan mein marker IDs nahi mili.",
+        message: "No marker IDs were found in the whole-class scan.",
       });
     if (markerIds.length > 200)
       return json(res, 400, {
-        message: "Ek scan mein adhiktam 200 cards bhejein.",
+        message: "Send a maximum of 200 cards per scan.",
       });
     const findByMarker = db.prepare(
       "SELECT student_id AS studentId, name, class_name AS className, academic_session AS academicSession FROM students WHERE marker_id = ? AND active = 1",
@@ -455,18 +455,18 @@ const api = async (req, res, url) => {
     return json(res, 200, {
       results,
       ...dailyAttendance(date),
-      message: `${results.filter((item) => item.status === "marked").length} attendance mark hui.`,
+      message: `Attendance marked for ${results.filter((item) => item.status === "marked").length} records.`,
     });
   }
   if (req.method === "POST" && url.pathname === "/api/attendance/sync") {
     const { events } = await readBody(req);
     if (!Array.isArray(events) || !events.length)
       return json(res, 400, {
-        message: "Offline sync ke liye attendance events chahiye.",
+        message: "Attendance events are required for offline sync.",
       });
     if (events.length > 2000)
       return json(res, 400, {
-        message: "Ek baar mein adhiktam 2000 attendance events sync karein.",
+        message: "Sync a maximum of 2000 attendance events at a time.",
       });
     const findStudent = db.prepare(
       "SELECT student_id AS studentId, name, class_name AS className, academic_session AS academicSession FROM students WHERE student_id = ? AND active = 1",
@@ -539,7 +539,7 @@ const api = async (req, res, url) => {
       ["marked", "duplicate"].includes(result.status),
     ).length;
     return json(res, 200, {
-      message: `${accepted}/${events.length} offline attendance sync ho gayi.`,
+      message: `Synced ${accepted}/${events.length} offline attendance records.`,
       results,
     });
   }
@@ -551,10 +551,10 @@ const api = async (req, res, url) => {
     return json(res,200,{events,count:events.length});
   }
   if (req.method === "POST" && url.pathname === "/api/attendance/sync-status") {
-    const {results}=await readBody(req); if(!Array.isArray(results)||results.length>500)return json(res,400,{message:"Valid sync results chahiye."});
+    const {results}=await readBody(req); if(!Array.isArray(results)||results.length>500)return json(res,400,{message:"Valid sync results are required."});
     const updateStudent=db.prepare("UPDATE attendance SET sync_status=?,synced_at=?,sync_error=? WHERE id=?"); const updateTeacher=db.prepare("UPDATE teacher_attendance SET sync_status=?,synced_at=?,sync_error=? WHERE id=?");
     const now=new Date().toISOString();db.exec("BEGIN");try{for(const result of results){const id=Number(result.id);if(!Number.isInteger(id))continue;const accepted=["synced","manual_override"].includes(result.status);(result.entityType==="teacher"?updateTeacher:updateStudent).run(accepted?"synced":"error",accepted?now:null,accepted?null:String(result.message||"Mongo sync failed").slice(0,500),id);}db.exec("COMMIT");}catch(error){db.exec("ROLLBACK");throw error;}
-    return json(res,200,{message:"SQLite sync status update ho gaya."});
+    return json(res,200,{message:"SQLite sync status updated."});
   }
 
   return false;
@@ -573,13 +573,13 @@ const server = createServer(async (req, res) => {
   try {
     if (url.pathname.startsWith("/api/")) {
       if ((await api(req, res, url)) === false)
-        json(res, 404, { message: "API route nahi mili." });
+        json(res, 404, { message: "API route not found." });
       return;
     }
     await serveFrontend(res, url.pathname, json);
   } catch (error) {
     console.error(error);
-    json(res, 500, { message: "Server error. Dobara koshish karein." });
+    json(res, 500, { message: "Server error. Please try again." });
   }
 });
 

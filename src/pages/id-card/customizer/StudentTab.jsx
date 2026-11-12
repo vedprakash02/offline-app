@@ -5,7 +5,7 @@ const StudentTab = ({ config, updateConfig, cardType = "student" }) => {
   const range = (label, key, min, max, step) => <RangeControl label={label} min={min} max={max} step={step} value={config[key]} onChange={(value) => updateConfig({ [key]: value })} />;
   return <div className="tab-content-block student-tab">
     <section className="student-control-section">
-      <div className="student-control-heading"><span>1</span><div><strong>{cardType === "teacher" ? "Teacher Name" : "Student Name"}</strong><small>Name ke sabhi controls</small></div></div>
+      <div className="student-control-heading"><span>1</span><div><strong>{cardType === "teacher" ? "Teacher Name" : "Student Name"}</strong><small>All name controls</small></div></div>
       <PositionGroup title="Name Size & Position">
         {range("Size", "studentNameSize", 9, 24)}{range("Left", "studentNameLeft", -50, 400)}{range("Top", "studentNameTopPos", -20, 300)}
       </PositionGroup>
@@ -47,7 +47,7 @@ const StudentTab = ({ config, updateConfig, cardType = "student" }) => {
     </section>
 
     <section className="student-control-section class-control-section">
-      <div className="student-control-heading"><span>2</span><div><strong>{cardType === "teacher" ? "Designation" : "Class Name"}</strong><small>{cardType === "teacher" ? "Designation ke controls" : "Class ke sabhi controls"}</small></div></div>
+      <div className="student-control-heading"><span>2</span><div><strong>{cardType === "teacher" ? "Designation" : "Class Name"}</strong><small>{cardType === "teacher" ? "Designation controls" : "All class controls"}</small></div></div>
       <PositionGroup title="Class Size & Position">
         {range("Size", "classNameSize", 8, 18)}{range("Left", "classNameLeft", -50, 400)}{range("Top", "classNameTopPos", -20, 300)}
       </PositionGroup>

@@ -27,7 +27,7 @@ export default function ModernRollNo() {
       });
       setStudents(response.data?.students || []);
     } catch (error) {
-      setStudents([]); setStatus({ type: "error", text: error.response?.data?.message || "Students load nahi ho paye." });
+      setStudents([]); setStatus({ type: "error", text: error.response?.data?.message || "Could not load students." });
     } finally { setFetching(false); }
   }, [activeSession, className, stream]);
 
@@ -46,14 +46,14 @@ export default function ModernRollNo() {
   const assignedCount = students.filter((student) => student.rollNo != null).length;
 
   const generateRollNumbers = async () => {
-    if (!className) return setStatus({ type: "error", text: "Pehle class select karein." });
-    if (!window.confirm(`Class ${className}, session ${activeSession} ke sabhi roll numbers regenerate karne hain?`)) return;
+    if (!className) return setStatus({ type: "error", text: "Select a class first." });
+    if (!window.confirm(`Regenerate all roll numbers for Class ${className}, Session ${activeSession}?`)) return;
     setGenerating(true); setStatus(null);
     try {
       const response = await axios.put("http://localhost:3000/generate-roll-no", { className, academicSession: activeSession }, { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } });
       setStatus({ type: "success", text: response.data.message });
       await loadStudents();
-    } catch (error) { setStatus({ type: "error", text: error.response?.data?.message || "Roll numbers generate nahi ho paye." }); }
+    } catch (error) { setStatus({ type: "error", text: error.response?.data?.message || "Could not generate roll numbers." }); }
     finally { setGenerating(false); }
   };
 
@@ -78,8 +78,8 @@ export default function ModernRollNo() {
 
     <section className="rn-content">
       <div className="rn-summary"><div><FiUsers /><span>Students<strong>{students.length}</strong></span></div><div><FiCheckCircle /><span>Assigned<strong>{assignedCount}</strong></span></div><div><FiAlertCircle /><span>Pending<strong>{students.length - assignedCount}</strong></span></div><button type="button" onClick={downloadExcel} disabled={!displayedStudents.length}><FiDownload /> Export Excel</button></div>
-      <div className="rn-table-wrap">{fetching ? <div className="rn-empty"><span className="rn-loader" />Loading students...</div> : displayedStudents.length ? <table><thead><tr><th>#</th><th>Roll No.</th><th>Admission No.</th><th>Student</th><th>Father</th><th>Class / Stream</th></tr></thead><tbody>{displayedStudents.map((student,index) => <tr key={student._id}><td>{index + 1}</td><td>{student.rollNo ? <strong className="rn-roll">{student.rollNo}</strong> : <span className="rn-pending">Pending</span>}</td><td>{student.admissionNo || "—"}</td><td className="rn-name">{student.name}</td><td>{student.fatherName || "—"}</td><td>{student.class}{student.stream ? ` · ${student.stream}` : ""}</td></tr>)}</tbody></table> : <div className="rn-empty"><FiUsers /><strong>{className ? "No students found" : "Select a class to begin"}</strong><span>{className ? "Filter change karke try karein." : "Student list automatically load ho jayegi."}</span></div>}</div>
+      <div className="rn-table-wrap">{fetching ? <div className="rn-empty"><span className="rn-loader" />Loading students...</div> : displayedStudents.length ? <table><thead><tr><th>#</th><th>Roll No.</th><th>Admission No.</th><th>Student</th><th>Father</th><th>Class / Stream</th></tr></thead><tbody>{displayedStudents.map((student,index) => <tr key={student._id}><td>{index + 1}</td><td>{student.rollNo ? <strong className="rn-roll">{student.rollNo}</strong> : <span className="rn-pending">Pending</span>}</td><td>{student.admissionNo || "—"}</td><td className="rn-name">{student.name}</td><td>{student.fatherName || "—"}</td><td>{student.class}{student.stream ? ` · ${student.stream}` : ""}</td></tr>)}</tbody></table> : <div className="rn-empty"><FiUsers /><strong>{className ? "No students found" : "Select a class to begin"}</strong><span>{className ? "Change the filters and try again." : "The student list will load automatically."}</span></div>}</div>
     </section>
-    <footer className="rn-note"><FiAlertCircle /> Generate action Arts A-Z, Science Maths A-Z, Science Biology A-Z aur Commerce A-Z order me renumber karta hai.</footer>
+    <footer className="rn-note"><FiAlertCircle /> Generate renumbers students in Arts A–Z, Science Maths A–Z, Science Biology A–Z and Commerce A–Z order.</footer>
   </main>;
 }

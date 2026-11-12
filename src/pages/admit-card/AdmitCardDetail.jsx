@@ -18,7 +18,7 @@ export default function AdmitCardDetail({ student, filters, onBack }) {
       const response = await axios.get("http://localhost:3000/get-school-profile", { headers: headers() });
       setSchoolProfile(response.data);
     } catch (error) {
-      console.error("School profile load nahi hua:", error);
+      console.error("Could not load the school profile:", error);
     }
   };
 
@@ -39,7 +39,7 @@ export default function AdmitCardDetail({ student, filters, onBack }) {
       <main className="admit-card-detail-page">
         <div className="admit-card-detail-empty">
           <FiAlertCircle />
-          <strong>Koi student select nahi hua</strong>
+          <strong>No student selected</strong>
         </div>
       </main>
     );

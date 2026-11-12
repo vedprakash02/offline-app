@@ -51,7 +51,7 @@ const CanvasTab = ({ config, updateConfig, toggleOrientation }) => {
         templateUrlsRef.current = templatesWithUrls.map((template) => template.url);
         setCustomTemplates(templatesWithUrls);
       })
-      .catch(() => setTemplateMessage("Saved templates load nahi ho sake."));
+      .catch(() => setTemplateMessage("Could not load saved templates."));
     return () => {
       cancelled = true;
     };
@@ -75,7 +75,7 @@ const CanvasTab = ({ config, updateConfig, toggleOrientation }) => {
     event.target.value = "";
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      setTemplateMessage("Sirf PNG, JPG ya image file select karein.");
+      setTemplateMessage("Select a PNG, JPG or other image file.");
       return;
     }
     try {
@@ -84,9 +84,9 @@ const CanvasTab = ({ config, updateConfig, toggleOrientation }) => {
       templateUrlsRef.current.push(template.url);
       setCustomTemplates((current) => [template, ...current]);
       selectCustomTemplate(template);
-      setTemplateMessage(`${template.name} save aur apply ho gaya.`);
+      setTemplateMessage(`${template.name} has been saved and applied.`);
     } catch {
-      setTemplateMessage("Template save nahi ho saka.");
+      setTemplateMessage("Could not save the template.");
     }
   };
 
@@ -99,9 +99,9 @@ const CanvasTab = ({ config, updateConfig, toggleOrientation }) => {
       templateUrlsRef.current = templateUrlsRef.current.filter((url) => url !== selected.url);
       URL.revokeObjectURL(selected.url);
       selectTemplate(imageTemplates[0]);
-      setTemplateMessage(`${selected.name} delete ho gaya.`);
+      setTemplateMessage(`${selected.name} has been deleted.`);
     } catch {
-      setTemplateMessage("Template delete nahi ho saka.");
+      setTemplateMessage("Could not delete the template.");
     }
   };
 
@@ -117,7 +117,7 @@ const CanvasTab = ({ config, updateConfig, toggleOrientation }) => {
           <label>Width (mm)<input type="number" min="40" max="140" step="0.1" value={canvasDraft.customCardWidthMm} onChange={(event) => setCanvasDraft((current) => ({ ...current, customCardWidthMm: Number(event.target.value) }))} /></label>
           <label>Height (mm)<input type="number" min="40" max="140" step="0.1" value={canvasDraft.customCardHeightMm} onChange={(event) => setCanvasDraft((current) => ({ ...current, customCardHeightMm: Number(event.target.value) }))} /></label>
         </div>}
-        <small className="canvas-help">Current {config.orientation}: {getCardDimensions(config).width} × {getCardDimensions(config).height} mm. PDF mein yahi exact size use hoga.</small>
+        <small className="canvas-help">Current {config.orientation}: {getCardDimensions(config).width} × {getCardDimensions(config).height} mm. The PDF will use this exact size.</small>
       </div>
       <div className="control-group">
         <label className="toolbar-label" htmlFor="card-sides">Printing sides</label>
@@ -126,7 +126,7 @@ const CanvasTab = ({ config, updateConfig, toggleOrientation }) => {
         </select>
         <button type="button" className="toolbar-btn apply-canvas-btn" onClick={() => {
           updateConfig(canvasDraft);
-          setTemplateMessage("Card size aur side settings preview aur print par apply ho gayi hain.");
+          setTemplateMessage("Card size and side settings have been applied to the preview and print.");
         }}>Apply to preview &amp; print</button>
       </div>
       <div className="control-group">

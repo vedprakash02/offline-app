@@ -19,7 +19,7 @@ export default function StudentExamDetail() {
 
   useEffect(() => {
     const load = async () => {
-      if (!studentClass || !session) { setError("Class ya session information missing hai."); setLoading(false); return; }
+      if (!studentClass || !session) { setError("Class or session information is missing."); setLoading(false); return; }
       try {
         const headers = { Authorization: `Bearer ${localStorage.getItem("token")}` };
         const responses = await Promise.all(SUMMARY_EXAMS.map((examType) => axios.get("http://localhost:3000/view-marks-matrix", { headers, params: { class: studentClass, academicYear: session, examType, ...(stream ? { stream } : {}) } })));
@@ -39,9 +39,9 @@ export default function StudentExamDetail() {
           const maximum = entered.reduce((sum, row) => sum + row.maximum, 0);
           details[exam] = { rows, total, maximum, percent: maximum ? Math.round(total / maximum * 100) : null };
         });
-        if (!identity) throw new Error("Student is class/session mein nahi mila.");
+        if (!identity) throw new Error("Student not found in this class or session.");
         setStudent(identity); setExamData(details);
-      } catch (requestError) { setError(requestError.response?.data?.message || requestError.message || "Student exam detail load nahi hui."); }
+      } catch (requestError) { setError(requestError.response?.data?.message || requestError.message || "Could not load student exam details."); }
       finally { setLoading(false); }
     };
     load();

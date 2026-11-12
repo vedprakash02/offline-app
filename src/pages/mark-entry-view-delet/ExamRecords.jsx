@@ -26,7 +26,7 @@ export default function ExamRecords() {
 
   const change = (e) => setFilters((old) => ({ ...old, [e.target.name]: e.target.value, ...(e.target.name === "class" ? { stream: "" } : {}) }));
   const load = async () => {
-    if (!filters.class || (["11th", "12th"].includes(filters.class) && !filters.stream)) return setMessage("Class aur 11th/12th ke liye stream select karein.");
+    if (!filters.class || (["11th", "12th"].includes(filters.class) && !filters.stream)) return setMessage("Select a class and a stream for Classes 11 and 12.");
     setLoading(true); setMessage("");
     try {
       if (filters.examType === "Unit Test") {
@@ -37,39 +37,39 @@ export default function ExamRecords() {
         const rows = (res.data.studentsMatrix || []).map((row) => ({ ...row, marks: Object.fromEntries(data.subjects.map((subject) => { const mark = row.marks?.[subject]; return [subject, mark ? Number(mark.theoryMarks || 0) + Number(mark.practicalEnabled ? mark.practicalMarks || 0 : 0) : ""]; })) }));
         setData(prev => ({ ...prev, rows, subjectMeta: res.data.subjectMeta || {} }));
       }
-    } catch (error) { setData(prev => ({ ...prev, rows: [], subjectMeta: {} })); setMessage(error.response?.data?.message || "Exam report load nahi hua."); }
+    } catch (error) { setData(prev => ({ ...prev, rows: [], subjectMeta: {} })); setMessage(error.response?.data?.message || "Could not load the exam report."); }
     finally { setLoading(false); }
   };
   const exportExcel = async () => {
-    if (!data.rows.length) return setMessage("Pehle report load karein.");
+    if (!data.rows.length) return setMessage("Load the report first.");
     const sheet = XLSX.utils.json_to_sheet(data.rows.map((row, index) => ({ "S.No.": index + 1, "Student ID": String(row.studentId), Roll: row.rollNo || "", Admission: row.admissionNo || "", Student: row.name, ...Object.fromEntries(data.subjects.map((subject) => [subject, row.marks?.[subject] ?? ""])) })));
     const book = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book, sheet, "Exam Records");
     const type = filters.examType === "Unit Test" ? `${filters.unit}-${filters.month}` : filters.examType;
     const result = await saveExcelWorkbook(book, `${filters.class}-${type}-records.xlsx`);
-    if (result?.cancelled) setMessage("Excel save cancel kiya gaya."); else setMessage("Excel file save ho gayi. Isi file ko edit karke upload bhi kar sakte hain.");
+    if (result?.cancelled) setMessage("Excel save cancelled."); else setMessage("Excel file saved. You can edit and upload this file.");
   };
   const importExcel = async (event) => {
     const file = event.target.files?.[0]; if (!file) return;
-    if (!data.rows.length) { setMessage("Pehle same class ka report load karein."); event.target.value = ""; return; }
+    if (!data.rows.length) { setMessage("Load the report for the same class first."); event.target.value = ""; return; }
     setUploading(true); setMessage("");
     try {
       const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
       const [head, ...lines] = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1, defval: "" });
       const index = Object.fromEntries(head.map((value, i) => [String(value).trim(), i]));
-      if (index["Student ID"] === undefined) throw new Error("Excel mein 'Student ID' column hona zaroori hai. Export wali file use karein.");
+      if (index["Student ID"] === undefined) throw new Error("The Excel file must contain a 'Student ID' column. Use the exported file.");
       const incoming = new Map(lines.filter((line) => line[index["Student ID"]]).map((line) => [String(line[index["Student ID"]]), line]));
       const subjects = data.subjects.filter((subject) => index[subject] !== undefined);
-      if (!subjects.length) throw new Error("Excel mein subject columns nahi mile.");
+      if (!subjects.length) throw new Error("No subject columns were found in the Excel file.");
       for (const subject of subjects) {
-        const students = data.rows.map((row) => { const line = incoming.get(String(row.studentId)); const raw = line ? line[index[subject]] : row.marks?.[subject]; const value = raw === "" || raw === undefined ? 0 : Number(raw); if (!Number.isFinite(value) || value < 0) throw new Error(`${subject} ke marks valid nahi hain.`); return { studentId: row.studentId, marks: value, theoryMarks: value, practicalMarks: 0 }; });
+        const students = data.rows.map((row) => { const line = incoming.get(String(row.studentId)); const raw = line ? line[index[subject]] : row.marks?.[subject]; const value = raw === "" || raw === undefined ? 0 : Number(raw); if (!Number.isFinite(value) || value < 0) throw new Error(`Marks for ${subject} are invalid.`); return { studentId: row.studentId, marks: value, theoryMarks: value, practicalMarks: 0 }; });
         if (filters.examType === "Unit Test") await axios.post("http://localhost:3000/unit-test-marks", { class: filters.class, stream: filters.stream, academicYear: filters.academicYear, unit: filters.unit, month: filters.month, subjectName: subject, maxMarks: 20, students: students.map(({ studentId, marks }) => ({ studentId, marks })) }, { headers: headers() });
         else { const meta = data.subjectMeta[subject] || {}; await axios.post("http://localhost:3000/save-bulk-marks", { class: filters.class, stream: filters.stream, academicYear: filters.academicYear, examType: filters.examType, subjectName: subject, theoryMaxMarks: Number(meta.theoryMaxMarks || 75), practicalMaxMarks: 0, practicalEnabled: false, students }, { headers: headers() }); }
       }
-      setMessage("Excel marks upload ho gaye."); await load();
-    } catch (error) { setMessage(error.response?.data?.message || error.message || "Excel upload nahi hua."); }
+      setMessage("Excel marks uploaded."); await load();
+    } catch (error) { setMessage(error.response?.data?.message || error.message || "Could not upload the Excel file."); }
     finally { setUploading(false); event.target.value = ""; }
   };
-  return <main className="me-page"><header className="me-header"><div className="me-icon"><FiBarChart2 /></div><div><span>EXAM RECORDS</span><h2>Subject-wise Exam Report</h2><p>Har student ka subject-wise marks record, Excel export aur upload.</p></div></header>{message && <div className="me-alert error">{message}</div>}
+  return <main className="me-page"><header className="me-header"><div className="me-icon"><FiBarChart2 /></div><div><span>EXAM RECORDS</span><h2>Subject-wise Exam Report</h2><p>Subject-wise marks records, Excel export and upload for every student.</p></div></header>{message && <div className="me-alert error">{message}</div>}
     <section className="me-toolbar"><label><span>Class</span><select name="class" value={filters.class} onChange={change}><option value="">Select class</option>{SCHOOL_CLASSES.map((item) => <option key={item}>{item}</option>)}</select></label><label><span>Stream</span><select name="stream" value={filters.stream} onChange={change} disabled={!['11th', '12th'].includes(filters.class)}><option value="">Select stream</option>{STREAMS.map((item) => <option key={item}>{item}</option>)}</select></label><label><span>Exam</span><select name="examType" value={filters.examType} onChange={change}>{EXAMS.map((item) => <option key={item}>{item}</option>)}<option>Unit Test</option></select></label>{filters.examType === "Unit Test" && <><label><span>Unit</span><select name="unit" value={filters.unit} onChange={change}>{UNITS.map((item) => <option key={item}>{item}</option>)}</select></label><label><span>Month</span><select name="month" value={filters.month} onChange={change}>{MONTHS.map((item) => <option key={item}>{item}</option>)}</select></label></>}<button type="button" onClick={load} disabled={loading}><FiSearch />{loading ? "Loading..." : "View records"}</button></section>
-    <section className="me-register"><div className="me-register-bar"><div><strong>{filters.examType === "Unit Test" ? `${filters.unit} · ${filters.month}` : filters.examType}</strong><span>{data.rows.length} students · {data.subjects.length} subjects</span></div><div className="me-excel-actions"><input ref={uploadRef} type="file" accept=".xlsx,.xls" hidden onChange={importExcel} /><button className="me-excel-export" type="button" onClick={exportExcel}><FiDownload /><span>Export Excel</span></button><button className="me-excel-upload" type="button" onClick={() => uploadRef.current?.click()} disabled={uploading}><FiUploadCloud /><span>{uploading ? "Uploading..." : "Upload Excel"}</span></button></div></div><div className="me-table-wrap">{data.rows.length ? <table><thead><tr><th>#</th><th>Roll</th><th>Student</th>{data.subjects.map((subject) => <th key={subject}>{subject}</th>)}<th>Total</th></tr></thead><tbody>{data.rows.map((row, i) => { const total = data.subjects.reduce((sum, subject) => sum + Number(row.marks?.[subject] || 0), 0); return <tr key={row.studentId}><td>{i + 1}</td><td>{row.rollNo || "—"}</td><td className="me-name">{row.name}</td>{data.subjects.map((subject) => <td key={subject}>{row.marks?.[subject] === "" ? "—" : row.marks?.[subject] ?? "—"}</td>)}<td><strong>{total}</strong></td></tr>; })}</tbody></table> : <div className="me-empty"><FiUsers /><strong>Filters choose karke subject-wise records dekhein</strong></div>}</div></section></main>;
+    <section className="me-register"><div className="me-register-bar"><div><strong>{filters.examType === "Unit Test" ? `${filters.unit} · ${filters.month}` : filters.examType}</strong><span>{data.rows.length} students · {data.subjects.length} subjects</span></div><div className="me-excel-actions"><input ref={uploadRef} type="file" accept=".xlsx,.xls" hidden onChange={importExcel} /><button className="me-excel-export" type="button" onClick={exportExcel}><FiDownload /><span>Export Excel</span></button><button className="me-excel-upload" type="button" onClick={() => uploadRef.current?.click()} disabled={uploading}><FiUploadCloud /><span>{uploading ? "Uploading..." : "Upload Excel"}</span></button></div></div><div className="me-table-wrap">{data.rows.length ? <table><thead><tr><th>#</th><th>Roll</th><th>Student</th>{data.subjects.map((subject) => <th key={subject}>{subject}</th>)}<th>Total</th></tr></thead><tbody>{data.rows.map((row, i) => { const total = data.subjects.reduce((sum, subject) => sum + Number(row.marks?.[subject] || 0), 0); return <tr key={row.studentId}><td>{i + 1}</td><td>{row.rollNo || "—"}</td><td className="me-name">{row.name}</td>{data.subjects.map((subject) => <td key={subject}>{row.marks?.[subject] === "" ? "—" : row.marks?.[subject] ?? "—"}</td>)}<td><strong>{total}</strong></td></tr>; })}</tbody></table> : <div className="me-empty"><FiUsers /><strong>Choose filters to view subject-wise records</strong></div>}</div></section></main>;
 }

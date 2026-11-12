@@ -27,7 +27,7 @@ const userschema = new Schema({
     type: String,
     enum: ["admin", "teacher"],
     default: "teacher",
-     required: [true, "Role select karna compulsory hai."]
+     required: [true, "Selecting a role is required."]
   },
 });
 

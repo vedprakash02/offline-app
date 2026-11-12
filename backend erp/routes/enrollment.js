@@ -14,11 +14,11 @@ const readCell = (row, aliases) => {
 
 router.post("/upload-namankan-excel", auth, async (req, res) => {
   try {
-    if (!["teacher", "admin"].includes(req.user.role)) return res.status(403).json({ success: false, message: "Data upload karne ki permission nahi hai." });
+    if (!["teacher", "admin"].includes(req.user.role)) return res.status(403).json({ success: false, message: "You do not have permission to upload data." });
     const { studentData, className, academicSession } = req.body;
-    if (!isValidAcademicSession(academicSession) || !["9th", "10th", "11th", "12th"].includes(className)) return res.status(400).json({ success: false, message: "Valid class aur academic session required hai." });
-    if (!Array.isArray(studentData) || studentData.length === 0) return res.status(400).json({ success: false, message: "Excel data khali ya invalid hai." });
-    if (studentData.length > 5000) return res.status(400).json({ success: false, message: "Ek baar me maximum 5000 rows upload karein." });
+    if (!isValidAcademicSession(academicSession) || !["9th", "10th", "11th", "12th"].includes(className)) return res.status(400).json({ success: false, message: "A valid class and academic session are required." });
+    if (!Array.isArray(studentData) || studentData.length === 0) return res.status(400).json({ success: false, message: "The Excel data is empty or invalid." });
+    if (studentData.length > 5000) return res.status(400).json({ success: false, message: "Upload a maximum of 5000 rows at a time." });
 
     const students = await Student.find({ class: className, academicSession }).select("_id name admissionNo").lean();
     const byAdmission = new Map(students.map((student) => [String(student.admissionNo || "").trim().toLowerCase(), student]));
@@ -56,7 +56,7 @@ router.post("/upload-namankan-excel", auth, async (req, res) => {
       const result = await Student.bulkWrite(operations, { ordered: false });
       summary.updated = result.modifiedCount;
     }
-    return res.status(200).json({ success: true, message: `${summary.updated} student records update hue.`, summary });
+    return res.status(200).json({ success: true, message: `Updated ${summary.updated} student records.`, summary });
   } catch (error) {
     console.error("Excel Upload Error:", error);
     return res.status(500).json({ success: false, message: "Server Error: " + error.message });
@@ -66,17 +66,17 @@ router.post("/upload-namankan-excel", auth, async (req, res) => {
 router.post("/upload-namankan-excel-legacy", auth, async (req, res) => {
   try {
     if (req.user.role !== "teacher" && req.user.role !== "admin") {
-      return res.status(403).json({ success: false, message: "Data upload karne ki permission nahi hai." });
+      return res.status(403).json({ success: false, message: "You do not have permission to upload data." });
     }
     // 💡 Frontend se ab studentData ke sath className bhi aayega
     const { studentData, className, academicSession } = req.body; 
 
     if (!className || !isValidAcademicSession(academicSession)) {
-      return res.status(400).json({ success: false, message: "Kripya Class ka naam bhejein." });
+      return res.status(400).json({ success: false, message: "Provide the class name." });
     }
 
     if (!studentData || studentData.length === 0) {
-      return res.status(400).json({ success: false, message: "Excel data khali hai." });
+      return res.status(400).json({ success: false, message: "The Excel data is empty." });
     }
 
     // 1. Select ki gayi Class ke saare bachho ko database se ek hi baar me nikal lo
@@ -114,14 +114,14 @@ router.post("/upload-namankan-excel-legacy", auth, async (req, res) => {
             updatedCount++;
           }
         } else {
-          console.log(`⚠️ Match nahi mila Class ${className} me: '${rawName.trim()}'`);
+          console.log(`⚠️ No match found in Class ${className}: '${rawName.trim()}'`);
         }
       }
     }
 
     return res.status(200).json({
       success: true,
-      message: `Excel se Class ${className} ke kul ${updatedCount} bachho ka data (Enrollment/Apaar/PEN) sahi se update ho gaya hai!`
+      message: `Enrollment/APAAR/PEN data updated successfully for ${updatedCount} students in Class ${className} from Excel.`
     });
 
   } catch (error) {

@@ -24,24 +24,24 @@ export default function UnitTestEntry() {
 
   const change = (event) => { const { name, value } = event.target; setFilters((old) => ({ ...old, [name]: value, ...(name === "class" ? { stream: "", subjectName: "" } : {}) })); setStudents([]); setStatus(null); };
   const load = async () => {
-    if (!filters.class || !filters.subjectName || (["11th", "12th"].includes(filters.class) && !filters.stream)) return setStatus({ type: "error", text: "Class, stream (11th/12th) aur subject select karein." });
+    if (!filters.class || !filters.subjectName || (["11th", "12th"].includes(filters.class) && !filters.stream)) return setStatus({ type: "error", text: "Select a class, stream (Classes 11 and 12) and subject." });
     setLoading(true); setStatus(null); setSearch("");
-    try { const res = await axios.get("http://localhost:3000/unit-test-matrix", { headers: auth(), params: filters }); setStudents(res.data.students || []); setMaxMarks(res.data.maxMarks || 20); if (!res.data.students?.length) setStatus({ type: "error", text: "Is selection mein koi student nahi mila." }); }
-    catch (error) { setStatus({ type: "error", text: error.response?.data?.message || "Unit test register load nahi hua." }); }
+    try { const res = await axios.get("http://localhost:3000/unit-test-matrix", { headers: auth(), params: filters }); setStudents(res.data.students || []); setMaxMarks(res.data.maxMarks || 20); if (!res.data.students?.length) setStatus({ type: "error", text: "No students were found for this selection." }); }
+    catch (error) { setStatus({ type: "error", text: error.response?.data?.message || "Could not load the unit test register." }); }
     finally { setLoading(false); }
   };
   const update = (studentId, raw) => { const marks = raw === "" ? "" : Math.max(0, Math.min(Number(raw), Number(maxMarks))); setStudents((old) => old.map((item) => item.studentId === studentId ? { ...item, marks } : item)); };
   const complete = students.filter((item) => item.marks !== "").length;
   const visible = useMemo(() => students.filter((item) => item.name.toLowerCase().includes(search.toLowerCase()) || String(item.rollNo || "").includes(search)), [students, search]);
   const save = async () => {
-    if (complete !== students.length) return setStatus({ type: "error", text: `${students.length - complete} students ke marks incomplete hain.` });
+    if (complete !== students.length) return setStatus({ type: "error", text: `Marks are incomplete for ${students.length - complete} students.` });
     setSaving(true); setStatus(null);
     try { const res = await axios.post("http://localhost:3000/unit-test-marks", { ...filters, maxMarks: Number(maxMarks), students: students.map((item) => ({ studentId: item.studentId, marks: Number(item.marks) })) }, { headers: auth() }); setStatus({ type: "success", text: res.data.message }); }
-    catch (error) { setStatus({ type: "error", text: error.response?.data?.message || "Unit test marks save nahi hue." }); }
+    catch (error) { setStatus({ type: "error", text: error.response?.data?.message || "Could not save unit test marks." }); }
     finally { setSaving(false); }
   };
 
-  return <main className="me-page"><header className="me-header"><div className="me-icon"><FiBookOpen /></div><div><span>UNIT TEST CONTROL</span><h2>Unit Test Entry</h2><p>Monthly unit test ka record regular exams se alag save hoga.</p></div><div className="me-session"><span>Working session</span><strong>{activeSession}</strong></div></header>
+  return <main className="me-page"><header className="me-header"><div className="me-icon"><FiBookOpen /></div><div><span>UNIT TEST CONTROL</span><h2>Unit Test Entry</h2><p>Monthly unit test records will be saved separately from regular exams.</p></div><div className="me-session"><span>Working session</span><strong>{activeSession}</strong></div></header>
     {status && <div className={`me-alert ${status.type}`}>{status.type === "success" ? <FiCheckCircle /> : <FiAlertCircle />}{status.text}</div>}
     <section className="me-toolbar"><label><span>Class</span><select name="class" value={filters.class} onChange={change}><option value="">Select class</option>{SCHOOL_CLASSES.map((item) => <option key={item}>{item}</option>)}</select></label><label><span>Stream</span><select name="stream" value={filters.stream} onChange={change} disabled={!['11th','12th'].includes(filters.class)}><option value="">Select stream</option>{STREAMS.map((item) => <option key={item}>{item}</option>)}</select></label><label><span>Unit test</span><select name="unit" value={filters.unit} onChange={change}>{UNITS.map((item) => <option key={item}>{item}</option>)}</select></label><label><span>Month</span><select name="month" value={filters.month} onChange={change}>{MONTHS.map((item) => <option key={item}>{item}</option>)}</select></label><label><span>Subject</span><select name="subjectName" value={filters.subjectName} onChange={change}><option value="">Select subject</option>{subjects.map((item) => <option key={item}>{item}</option>)}</select></label><button type="button" onClick={load} disabled={loading}><FiUsers />{loading ? "Loading..." : "Load register"}</button></section>
     <section className="ame-max-marks"><strong>Unit test maximum marks</strong><div><label>Marks <input type="number" value={maxMarks} onChange={(e) => setMaxMarks(Math.max(1, Math.min(100, Number(e.target.value) || 1)))} min="1" max="100" /></label></div></section>

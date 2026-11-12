@@ -48,13 +48,13 @@ export default function ModernSignUp() {
         }, 2000);
       } else {
         setIsError(true);
-        setMessage(data.message || "Account create nahi ho paya.");
+        setMessage(data.message || "Could not create the account.");
         setLoading(false);
       }
     } catch (error) {
       console.error("Signup Error:", error);
       setIsError(true);
-      setMessage("Server se connect nahi ho pa raha hai!");
+      setMessage("Could not connect to the server.");
       setLoading(false);
     }
   };

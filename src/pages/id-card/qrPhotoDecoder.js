@@ -2,7 +2,7 @@ const imageFromFile = (file) => new Promise((resolve, reject) => {
   const image = new Image();
   const url = URL.createObjectURL(file);
   image.onload = () => { URL.revokeObjectURL(url); resolve(image); };
-  image.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Photo open nahi hui.")); };
+  image.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Could not open the photo.")); };
   image.src = url;
 });
 
@@ -60,5 +60,5 @@ export const decodeQrPhoto = async (file, reader) => {
     try { return await reader.scanFile(candidate, true); }
     catch (error) { lastError = error; }
   }
-  throw lastError || new Error("QR nahi mila.");
+  throw lastError || new Error("QR code not found.");
 };

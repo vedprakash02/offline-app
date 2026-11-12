@@ -136,10 +136,10 @@ export default function TimeTable() {
   const saveTimeTable = async () => {
     console.log("Saving time table...", Object.keys(scheduleData).length);
     if (!filters.examType) {
-      return setStatus({ type: "error", text: "Exam type select karein." });
+      return setStatus({ type: "error", text: "Select an exam type." });
     }
     if (Object.keys(scheduleData).length === 0) {
-      return setStatus({ type: "error", text: "Kam se kam ek schedule add karein." });
+      return setStatus({ type: "error", text: "Add at least one schedule." });
     }
 
     setSaving(true);
@@ -168,13 +168,13 @@ export default function TimeTable() {
       );
       
       console.log("Backend response:", response.data);
-      setStatus({ type: "success", text: "Time table save ho gaya." });
+      setStatus({ type: "success", text: "Timetable saved." });
       setSavedStatus(true);
       setTimeout(() => setSavedStatus(false), 3000);
     } catch (error) {
       console.error("Save error:", error);
       console.error("Error response:", error.response?.data);
-      setStatus({ type: "error", text: error.response?.data?.message || "Time table save nahi hua." });
+      setStatus({ type: "error", text: error.response?.data?.message || "Could not save the timetable." });
     } finally {
       setSaving(false);
     }
@@ -182,7 +182,7 @@ export default function TimeTable() {
 
   const loadTimeTable = async () => {
     if (!filters.examType) {
-      return setStatus({ type: "error", text: "Exam type select karein." });
+      return setStatus({ type: "error", text: "Select an exam type." });
     }
     setLoading(true);
     setStatus(null);
@@ -197,10 +197,10 @@ export default function TimeTable() {
       setScheduleData(response.data.schedule || {});
       setExamTimes({ primary: "", middle: "", higher: "", ...(response.data.examTimes || {}) });
       if (!response.data.schedule || Object.keys(response.data.schedule).length === 0) {
-        setStatus({ type: "error", text: "Koi time table nahi mila." });
+        setStatus({ type: "error", text: "No timetable was found." });
       }
     } catch (error) {
-      setStatus({ type: "error", text: error.response?.data?.message || "Time table load nahi hua." });
+      setStatus({ type: "error", text: error.response?.data?.message || "Could not load the timetable." });
     } finally {
       setLoading(false);
     }
@@ -319,7 +319,7 @@ export default function TimeTable() {
           {sortedDates.length === 0 ? (
             <div className="time-table-empty">
               <FiClock />
-              <strong>"Add Date Row" button se date add karein</strong>
+              <strong>Use the "Add Date Row" button to add a date</strong>
             </div>
           ) : (
             <div className="schedule-table">

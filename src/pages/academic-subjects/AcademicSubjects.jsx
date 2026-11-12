@@ -36,7 +36,7 @@ export default function AcademicSubjects() {
   useEffect(() => {
     if (!session) {
       setLoading(false);
-      setNotice("Pehle academic session select karein.");
+      setNotice("Select an academic session first.");
       return undefined;
     }
     const controller = new AbortController();
@@ -52,7 +52,7 @@ export default function AcademicSubjects() {
         setSubjects(data.classes?.[classKey] || (stream ? STREAM_SUBJECTS[stream] : defaultSubjects));
         setNotice("");
       } catch (error) {
-        if (error.code !== "ERR_CANCELED") setNotice(error.response?.data?.message || "Subjects load nahi hue.");
+        if (error.code !== "ERR_CANCELED") setNotice(error.response?.data?.message || "Could not load subjects.");
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -76,9 +76,9 @@ export default function AcademicSubjects() {
   };
 
   const save = async () => {
-    if (!session) return setNotice("Pehle academic session select karein.");
-    if (isSenior && !stream) return setNotice("11th/12th ke liye stream select karein.");
-    if (!subjects.length) return setNotice("Kam se kam ek subject add karein.");
+    if (!session) return setNotice("Select an academic session first.");
+    if (isSenior && !stream) return setNotice("Select a stream for Classes 11 and 12.");
+    if (!subjects.length) return setNotice("Add at least one subject.");
     setSaving(true);
     setNotice("");
     try {
@@ -91,7 +91,7 @@ export default function AcademicSubjects() {
       setSavedClasses((current) => ({ ...current, [classKey]: data.subjects || subjects }));
       setNotice(data.message || "Subjects saved successfully.");
     } catch (error) {
-      setNotice(error.response?.data?.message || "Subjects save nahi hue.");
+      setNotice(error.response?.data?.message || "Could not save subjects.");
     } finally {
       setSaving(false);
     }
@@ -101,7 +101,7 @@ export default function AcademicSubjects() {
     <main className="academic-subject-page">
       <header className="academic-subject-hero">
         <button type="button" onClick={() => navigate("/dashboard")}><FiArrowLeft /> Dashboard</button>
-        <div><span>ACADEMIC SETUP</span><h1>Class subjects</h1><p>Har class ke liye school ke subjects customize karein.</p></div>
+        <div><span>ACADEMIC SETUP</span><h1>Class subjects</h1><p>Customize school subjects for each class.</p></div>
         <strong>{session || "Session not selected"}</strong>
       </header>
       <section className="academic-subject-layout">
@@ -112,15 +112,15 @@ export default function AcademicSubjects() {
         <section className="academic-subject-card subject-editor">
           <div className="academic-heading"><FiBookOpen /><div><span>Step 2</span><h2>{className}{stream ? ` · ${stream}` : ""} subjects</h2></div></div>
           {isSenior && <label className="stream-picker"><span>Stream</span><select value={stream} onChange={(event) => setStream(event.target.value)}><option value="">Select stream</option>{STREAMS.map((item) => <option value={item} key={item}>{item}</option>)}</select></label>}
-          <p className="academic-help">List se subject select karein. Agar subject na mile to last me Other choose karein.</p>
-          {loading ? <p>Subjects load ho rahe hain...</p> : <>
+          <p className="academic-help">Select a subject from the list. If it is not listed, choose Other at the end.</p>
+          {loading ? <p>Loading subjects...</p> : <>
             <div className="subject-add"><select value={newSubject} onChange={(event) => setNewSubject(event.target.value)}><option value="">Select a subject</option>{(STREAM_SUBJECTS[stream] || SUBJECT_OPTIONS).filter((subject) => !subjects.includes(subject)).map((subject) => <option value={subject} key={subject}>{subject}</option>)}<option value="Other">Other</option></select>{newSubject === "Other" && <input value={customSubject} onChange={(event) => setCustomSubject(event.target.value)} placeholder="Type custom subject" maxLength="80" />}<button type="button" onClick={addSubject}><FiPlus /> Add subject</button></div>
             <div className="subject-list">{subjects.map((subject) => <div className="subject-row" key={subject}><span>{subject}</span><button type="button" onClick={() => setSubjects((current) => current.filter((item) => item !== subject))} aria-label={`Remove ${subject}`}><FiTrash2 /></button></div>)}</div>
             <div className="academic-save-row">{notice && <span className={notice.includes("success") ? "success" : "error"}>{notice.includes("success") && <FiCheck />}{notice}</span>}<button type="button" className="academic-save" onClick={save} disabled={saving}>{saving ? "Saving..." : "Save subjects"}</button></div>
           </>}
         </section>
       </section>
-      <section className="saved-subjects-card"><div className="academic-heading"><FiCheck /><div><span>Saved setup</span><h2>Class-wise subjects</h2></div></div>{Object.keys(savedClasses).length ? <div className="saved-subjects-grid">{Object.entries(savedClasses).map(([key, list]) => { const [savedClass, savedStream] = key.split("|"); return <article key={key}><strong>{savedClass}{savedStream ? ` · ${savedStream}` : ""}</strong><span>{list.join(" · ")}</span></article>; })}</div> : <p className="academic-help">Abhi kisi class ke subjects save nahi hue.</p>}</section>
+      <section className="saved-subjects-card"><div className="academic-heading"><FiCheck /><div><span>Saved setup</span><h2>Class-wise subjects</h2></div></div>{Object.keys(savedClasses).length ? <div className="saved-subjects-grid">{Object.entries(savedClasses).map(([key, list]) => { const [savedClass, savedStream] = key.split("|"); return <article key={key}><strong>{savedClass}{savedStream ? ` · ${savedStream}` : ""}</strong><span>{list.join(" · ")}</span></article>; })}</div> : <p className="academic-help">No class subjects have been saved yet.</p>}</section>
     </main>
   );
 }

@@ -18,7 +18,7 @@ import { downloadStyledIdCardTemplate, downloadStyledTeacherIdCardTemplate } fro
 const fileToDataUrl = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader();
   reader.onload = () => resolve(reader.result);
-  reader.onerror = () => reject(reader.error || new Error("Photo read nahi ho saki."));
+  reader.onerror = () => reject(reader.error || new Error("Could not read the photo."));
   reader.readAsDataURL(file);
 });
 
@@ -65,7 +65,7 @@ const IdCardCustomizer = () => {
   useEffect(() => {
     if (!previewHydrated) return;
     savePreviewWork({ students, selectedStudentIndex, page, cardType }).catch(() => {
-      setSaveMessage("Preview browser storage mein save nahi ho saka.");
+      setSaveMessage("Could not save the preview to browser storage.");
     });
   }, [students, selectedStudentIndex, page, cardType, previewHydrated]);
   useEffect(() => {
@@ -82,20 +82,20 @@ const IdCardCustomizer = () => {
   };
 
   const syncStudentsToServer = async () => {
-    if (!students.length) return setSaveMessage(cardType === "teacher" ? "Pehle teachers load karein." : "Pehle Excel file load karein.");
-    if (cardType === "student" && !/^\d{4}-\d{4}$/.test(localStorage.getItem("activeSession") || "")) return setSaveMessage("Pehle valid academic session select karein.");
+    if (!students.length) return setSaveMessage(cardType === "teacher" ? "Load teachers first." : "Load an Excel file first.");
+    if (cardType === "student" && !/^\d{4}-\d{4}$/.test(localStorage.getItem("activeSession") || "")) return setSaveMessage("Select a valid academic session first.");
     try { const result = cardType === "teacher" ? await attendanceApi.syncTeachers(students) : await attendanceApi.syncStudents(students); setSaveMessage(result.message); }
-    catch (error) { setSaveMessage(`${error.message} Backend server check karein.`); }
+    catch (error) { setSaveMessage(`${error.message} Check the backend server.`); }
   };
 
   const resetSyncedStudents = async () => {
-    const confirmation = window.prompt("Sirf local SQLite roster aur QR attendance delete hogi. MongoDB attendance safe rahegi. Confirm karne ke liye RESET likhein.");
-    if (confirmation !== "RESET") return setSaveMessage("Reset cancel ho gaya.");
+    const confirmation = window.prompt("Only the local SQLite roster and QR attendance will be deleted. MongoDB attendance will remain safe. Type RESET to confirm.");
+    if (confirmation !== "RESET") return setSaveMessage("Reset cancelled.");
     try {
       const result = await attendanceApi.resetStudents();
-      setSaveMessage(`${result.message} Ab nayi list ko Sync students karein.`);
+      setSaveMessage(`${result.message} Now use Sync students to sync the new list.`);
     } catch (error) {
-      setSaveMessage(`${error.message} Backend server check karein.`);
+      setSaveMessage(`${error.message} Check the backend server.`);
     }
   };
 
@@ -116,12 +116,12 @@ const IdCardCustomizer = () => {
       const mappedStudents = rawRows.map(mapStudentRow).filter((student) => student.name);
       const missingAdmissionNumbers = mappedStudents.filter((student) => !student.studentId);
       if (missingAdmissionNumbers.length) {
-        throw new Error(`${missingAdmissionNumbers.length} students ka Admission_No missing hai. Mongo attendance merge ke liye ye column zaroori hai.`);
+        throw new Error(`Admission_No is missing for ${missingAdmissionNumbers.length} students. This column is required to merge MongoDB attendance.`);
       }
       const imported = ensureStudentIds(mappedStudents);
 
       if (!imported.length) {
-        throw new Error("Name column match nahi hui. Column headings check karein.");
+        throw new Error("Could not match the Name column. Check the column headings.");
       }
 
       photoObjectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
@@ -130,7 +130,7 @@ const IdCardCustomizer = () => {
       setStudents(imported);
       setSelectedStudentIndex(0);
       setPage("bulk");
-      setSaveMessage(`${imported.length} student load ho gaye.`);
+      setSaveMessage(`${imported.length} students loaded.`);
     } catch (err) {
       setSaveMessage(err.message || "Excel file read error.");
     } finally {
@@ -150,12 +150,12 @@ const IdCardCustomizer = () => {
       const mappedTeachers = rawRows.map(mapTeacherRow).filter((teacher) => teacher.name);
       const missingEmployeeIds = mappedTeachers.filter((teacher) => !teacher.employeeId);
       if (missingEmployeeIds.length) {
-        throw new Error(`${missingEmployeeIds.length} teachers ka Employee_ID missing hai. QR attendance merge ke liye ye column zaroori hai.`);
+        throw new Error(`Employee_ID is missing for ${missingEmployeeIds.length} teachers. This column is required to merge QR attendance.`);
       }
       const imported = ensureTeacherIds(mappedTeachers);
 
       if (!imported.length) {
-        throw new Error("Name column match nahi hui. Column headings check karein.");
+        throw new Error("Could not match the Name column. Check the column headings.");
       }
 
       photoObjectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
@@ -164,7 +164,7 @@ const IdCardCustomizer = () => {
       setStudents(imported);
       setSelectedStudentIndex(0);
       setPage("bulk");
-      setSaveMessage(`${imported.length} teacher load ho gaye.`);
+      setSaveMessage(`${imported.length} teachers loaded.`);
     } catch (err) {
       setSaveMessage(err.message || "Teacher Excel file read error.");
     } finally {
@@ -177,11 +177,11 @@ const IdCardCustomizer = () => {
     e.target.value = "";
 
     if (!students.length) {
-      setSaveMessage("Pehle Excel file load karein, phir student photos ka folder select karein.");
+      setSaveMessage("Load an Excel file first, then select the student photos folder.");
       return;
     }
     if (!imageFiles.length) {
-      setSaveMessage("Selected folder mein koi image file nahi mili.");
+      setSaveMessage("No image files were found in the selected folder.");
       return;
     }
 
@@ -197,29 +197,29 @@ const IdCardCustomizer = () => {
         if (photo) matchedPhotos += 1;
         return photo ? { ...student, photo } : student;
       }));
-      setSaveMessage(`${matchedPhotos}/${students.length} photos serial number se match ho gayi.`);
+      setSaveMessage(`${matchedPhotos}/${students.length} photos matched by serial number.`);
     } catch (err) {
-      setSaveMessage(err.message || "Photos read nahi ho saki.");
+      setSaveMessage(err.message || "Could not read the photos.");
     }
   };
 
   const downloadExcelTemplate = async () => {
     try {
       const result = await downloadStyledIdCardTemplate("student-id-card-template.xlsx");
-      if (result?.cancelled) return setSaveMessage("Student template save cancel kiya gaya.");
-      setSaveMessage("Student template select ki hui location par save ho gayi.");
+      if (result?.cancelled) return setSaveMessage("Student template save cancelled.");
+      setSaveMessage("Student template saved to the selected location.");
     } catch (error) {
-      setSaveMessage(error?.message || "Student template save dialog nahi khul saka.");
+      setSaveMessage(error?.message || "Could not open the student template save dialog.");
     }
   };
 
   const downloadTeacherExcelTemplate = async () => {
     try {
       const result = await downloadStyledTeacherIdCardTemplate("teacher-id-card-template.xlsx");
-      if (result?.cancelled) return setSaveMessage("Teacher template save cancel kiya gaya.");
-      setSaveMessage("Teacher template select ki hui location par save ho gayi.");
+      if (result?.cancelled) return setSaveMessage("Teacher template save cancelled.");
+      setSaveMessage("Teacher template saved to the selected location.");
     } catch (error) {
-      setSaveMessage(error?.message || "Teacher template save dialog nahi khul saka.");
+      setSaveMessage(error?.message || "Could not open the teacher template save dialog.");
     }
   };
 
@@ -235,7 +235,7 @@ const IdCardCustomizer = () => {
         <div className="id-customizer-header-text"><h3 className="id-customizer-eyebrow">ID Card Studio</h3></div>
         <div className="id-customizer-actions">
           <div className="idc-toolbar-general">
-            <button className="idc-btn idc-action-dashboard" style={toolbarButtonStyle("#15803d")} type="button" onClick={() => window.location.assign("/dashboard")}>Dashboard par wapas jayein</button>
+            <button className="idc-btn idc-action-dashboard" style={toolbarButtonStyle("#15803d")} type="button" onClick={() => window.location.assign("/dashboard")}>Return to dashboard</button>
             <button className="idc-btn idc-theme-toggle" style={toolbarButtonStyle(theme === "light" ? "#1e293b" : "#f59e0b")} type="button" onClick={() => setTheme((current) => current === "light" ? "dark" : "light")} aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`} title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}>{theme === "light" ? <FiMoon /> : <FiSun />}<span>{theme === "light" ? "Dark mode" : "Light mode"}</span></button>
             <button className="idc-btn idc-action-language" style={toolbarButtonStyle("#475569")} type="button" onClick={() => setConfig((current) => ({ ...current, language: current.language === "hi" ? "en" : "hi" }))}>{config.language === "hi" ? "English mode" : "Hindi mode"}</button>
             <button className="idc-btn idc-action-school" style={toolbarButtonStyle("#7c3aed")} type="button" onClick={() => setPage("school")}>School details</button>

@@ -23,7 +23,7 @@ export default function ModernSchoolProfile() {
       try {
         const response = await fetch("http://localhost:3000/get-school-profile", { headers: { Authorization: `Bearer ${token}` } });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.message || "Profile load nahi ho payi.");
+        if (!response.ok) throw new Error(data.message || "Could not load the profile.");
         setProfileData({ schoolName: data.schoolName || "", schoolCode: data.schoolCode || "", sansthacode: data.sansthacode || "", phone: data.phone || "", address: data.address || "", block: data.block || "", dist: data.dist || "" });
         if (data.schoolImage) setImagePreview(`http://localhost:3000/uploads/${data.schoolImage}`);
         if (data.schoolSignature) setSignaturePreview(`http://localhost:3000/uploads/${data.schoolSignature}`);
@@ -40,7 +40,7 @@ export default function ModernSchoolProfile() {
   const selectFile = (event, setFile, setPreview) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) return setStatus({ type: "error", text: "Image size 5 MB se kam honi chahiye." });
+    if (file.size > 5 * 1024 * 1024) return setStatus({ type: "error", text: "The image size must be less than 5 MB." });
     setFile(file); setPreview(URL.createObjectURL(file)); setStatus({ type: "", text: "" });
   };
 
@@ -53,10 +53,10 @@ export default function ModernSchoolProfile() {
     try {
       const response = await fetch("http://localhost:3000/save-school-profile", { method: "POST", headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }, body: formData });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Profile save nahi ho payi.");
+      if (!response.ok) throw new Error(data.message || "Could not save the profile.");
       setStatus({ type: "success", text: data.message || "School profile successfully saved." });
       setTimeout(() => navigate("/dashboard"), 900);
-    } catch (error) { setStatus({ type: "error", text: error.message || "Server se connect nahi ho paye." }); }
+    } catch (error) { setStatus({ type: "error", text: error.message || "Could not connect to the server." }); }
     finally { setSaving(false); }
   };
 

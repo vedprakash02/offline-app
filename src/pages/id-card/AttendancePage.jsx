@@ -13,7 +13,7 @@ const loadRecords = () => {
 
 const AttendancePage = ({ students = [], onBack }) => {
   const [records, setRecords] = useState(loadRecords);
-  const [message, setMessage] = useState("Camera start karke ID card ka QR scan karein.");
+  const [message, setMessage] = useState("Start the camera and scan the QR code on the ID card.");
   const [scanning, setScanning] = useState(false);
   const [manualCode, setManualCode] = useState("");
   const scannerRef = useRef(null);
@@ -31,10 +31,10 @@ const AttendancePage = ({ students = [], onBack }) => {
   const markAttendance = (rawValue) => {
     const studentId = normalizeStudentId(readStudentIdFromQr(rawValue) || rawValue);
     const student = studentMap.get(studentId);
-    if (!student) { setMessage(`Student ID ${studentId || "blank"} nahi mili. Is mobile mein ${students.length} students loaded hain; sahi Excel dobara load karein.`); return; }
+    if (!student) { setMessage(`Student ID ${studentId || "blank"} was not found. This phone has ${students.length} students loaded; reload the correct Excel file.`); return; }
     const date = todayKey();
     const duplicate = records.some((record) => record.studentId === studentId && record.date === date);
-    if (duplicate) { setMessage(`${student.name} ki attendance aaj pehle hi lag chuki hai.`); return; }
+    if (duplicate) { setMessage(`Attendance for ${student.name} has already been marked today.`); return; }
     const now = new Date();
     setRecords((current) => [...current, {
       studentId, name: student.name, className: student.className || "", date,
@@ -51,12 +51,12 @@ const AttendancePage = ({ students = [], onBack }) => {
     } catch { /* Scanner may already be stopped. */ }
     scannerRef.current = null;
     setScanning(false);
-    setMessage("Camera band hai. Dobara scan karne ke liye Start camera scanner dabayein.");
+    setMessage("The camera is off. Tap Start camera scanner to scan again.");
   };
 
   const startScanner = async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
-      setMessage("Camera access ke liye application ko HTTPS URL mein kholein.");
+      setMessage("Open the application using an HTTPS URL to access the camera.");
       return;
     }
     try {
@@ -75,9 +75,9 @@ const AttendancePage = ({ students = [], onBack }) => {
         () => {},
       );
       setScanning(true);
-      setMessage("Scanner ready — QR ko camera ke saamne rakhein.");
+      setMessage("Scanner ready — place the QR code in front of the camera.");
     } catch (error) {
-      setMessage(error?.name === "NotAllowedError" ? "Camera permission allow karein." : "Camera start nahi ho saka. HTTPS aur camera permission check karein.");
+      setMessage(error?.name === "NotAllowedError" ? "Allow camera permission." : "Could not start the camera. Check HTTPS and camera permission.");
       scannerRef.current = null;
       setScanning(false);
     }
@@ -88,13 +88,13 @@ const AttendancePage = ({ students = [], onBack }) => {
     event.target.value = "";
     if (!file) return;
     try {
-      setMessage("QR photo scan ho rahi hai...");
+      setMessage("Scanning QR photo...");
       const photoScanner = new Html5Qrcode("attendance-qr-reader");
       const value = await photoScanner.scanFile(file, false);
       photoScanner.clear();
       markAttendance(value);
     } catch {
-      setMessage("Photo mein QR nahi mila. QR ko paas se, seedha aur achchi roshni mein dobara photo lein.");
+      setMessage("No QR code was found in the photo. Take another close, straight photo in good lighting.");
     }
   };
 
@@ -123,7 +123,7 @@ const AttendancePage = ({ students = [], onBack }) => {
         <div className="scanner-controls">
           {!scanning ? <button type="button" onClick={startScanner}>Start camera scanner</button> : <button type="button" onClick={stopScanner}>Stop camera</button>}
           <input ref={qrPhotoInputRef} className="qr-photo-input" type="file" accept="image/*" capture="environment" onChange={scanQrPhoto} />
-          <button type="button" onClick={() => qrPhotoInputRef.current?.click()}>QR ki photo lekar scan karein</button>
+          <button type="button" onClick={() => qrPhotoInputRef.current?.click()}>Take a QR photo to scan</button>
           <form onSubmit={(event) => { event.preventDefault(); markAttendance(manualCode); setManualCode(""); }}>
             <input value={manualCode} onChange={(event) => setManualCode(event.target.value)} placeholder="Student ID / scanned value" />
             <button type="submit" disabled={!manualCode.trim()}>Mark</button>
@@ -132,7 +132,7 @@ const AttendancePage = ({ students = [], onBack }) => {
       </section>
       <section className="attendance-list">
         <h3>Today's attendance</h3>
-        {!todayRecords.length ? <p className="empty-attendance">Abhi koi attendance nahi lagi.</p> :
+        {!todayRecords.length ? <p className="empty-attendance">No attendance has been marked yet.</p> :
           <div className="attendance-table-wrap"><table><thead><tr><th>Time</th><th>Student ID</th><th>Name</th><th>Class</th><th>Status</th></tr></thead>
           <tbody>{[...todayRecords].reverse().map((record) => <tr key={`${record.studentId}-${record.date}`}><td>{record.time}</td><td>{record.studentId}</td><td>{record.name}</td><td>{record.className || "—"}</td><td><span>Present</span></td></tr>)}</tbody></table></div>}
       </section>

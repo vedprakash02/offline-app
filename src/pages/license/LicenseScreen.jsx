@@ -16,7 +16,7 @@ export default function LicenseScreen({ status, onActivated }) {
   const [notice, setNotice] = useState(null);
   const copyMachine = async () => {
     await navigator.clipboard.writeText(status.machineId || "");
-    setNotice({ type: "success", text: "Machine ID copy ho gaya." });
+    setNotice({ type: "success", text: "Machine ID copied." });
   };
   const activate = async () => {
     if (!file) return;
@@ -37,7 +37,7 @@ export default function LicenseScreen({ status, onActivated }) {
     } catch (error) {
       setNotice({
         type: "error",
-        text: error.response?.data?.message || "License activate nahi hua.",
+        text: error.response?.data?.message || "Could not activate the license.",
       });
     } finally {
       setBusy("");
@@ -62,7 +62,7 @@ export default function LicenseScreen({ status, onActivated }) {
         type: "error",
         text:
           error.response?.data?.message ||
-          "Backup download nahi hua. Admin login aur dono backends check karein.",
+          "Could not download the backup. Check the admin login and both backends.",
       });
     } finally {
       setBusy("");
@@ -140,8 +140,7 @@ export default function LicenseScreen({ status, onActivated }) {
         <div className="license-safety">
           <FiAlertTriangle />
           <p>
-            Expiry par school data delete nahi hota. Renewal tak system write
-            operations rokta hai aur emergency backup available rehta hai.
+            School data is not deleted when the license expires. Write operations are paused until renewal, and emergency backup remains available.
           </p>
         </div>
         <button

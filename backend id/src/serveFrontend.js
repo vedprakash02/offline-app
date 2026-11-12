@@ -31,6 +31,6 @@ export const serveFrontend = async (response, pathname, sendJson) => {
     });
     response.end(content);
   } catch {
-    sendJson(response, 503, { message: "Frontend build nahi mili. Pehle frontend mein npm run build chalayein." });
+    sendJson(response, 503, { message: "Frontend build not found. Run npm run build in the frontend first." });
   }
 };

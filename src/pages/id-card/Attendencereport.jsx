@@ -22,7 +22,7 @@ export default function AttendenceReport({ onBack }) {
         .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
       setClasses(available);
       setStudentClass((current) => current || available[0] || "");
-    }).catch((err) => setError(`${err.message} Backend server check karein.`));
+    }).catch((err) => setError(`${err.message} Check the backend server.`));
   }, []);
 
   const loadReport = useCallback(async () => {
@@ -31,21 +31,21 @@ export default function AttendenceReport({ onBack }) {
     try {
       const response = await attendanceApi.getMonthlyReport(studentClass, month);
       if (!Array.isArray(response.calendar) || !response.summary) {
-        throw new Error("Backend ka purana version chal raha hai. Backend restart karein.");
+        throw new Error("An older backend version is running. Restart the backend.");
       }
       setData(response);
     }
-    catch (err) { setData({ students: [], calendar: [], summary: {} }); setError(`${err.message} Backend server check karein.`); }
+    catch (err) { setData({ students: [], calendar: [], summary: {} }); setError(`${err.message} Check the backend server.`); }
     finally { setLoading(false); }
   }, [studentClass, month]);
 
   useEffect(() => { loadReport(); }, [loadReport]);
 
   const updateHoliday = async (isHoliday) => {
-    if (!selectedHolidayDate) return setError("Pehle ek date select karein.");
-    if (!selectedHolidayDate.startsWith(`${month}-`)) return setError("Date selected month ke andar honi chahiye.");
+    if (!selectedHolidayDate) return setError("Select a date first.");
+    if (!selectedHolidayDate.startsWith(`${month}-`)) return setError("The date must be within the selected month.");
     const action = isHoliday ? "Holiday" : "Working Day";
-    if (!window.confirm(`Class ${studentClass} ke liye ${selectedHolidayDate} ko ${action} mark karein?`)) return;
+    if (!window.confirm(`Mark ${selectedHolidayDate} as ${action} for Class ${studentClass}?`)) return;
     setUpdatingHoliday(true); setError("");
     try { await attendanceApi.setHoliday(selectedHolidayDate, studentClass, isHoliday); setSelectedHolidayDate(""); await loadReport(); }
     catch (err) { setError(err.message); }
@@ -86,7 +86,7 @@ export default function AttendenceReport({ onBack }) {
       <tr>{calendar.map((day) => <th key={day.date} className={day.isHoliday ? "ar-day-holiday" : ""} title={day.date}>{day.day}</th>)}<th>P</th><th>A</th><th>Days</th><th>%</th></tr></thead>
       <tbody>{students.map((student) => <tr key={student.studentId}><td className="ar-student"><em>{student.studentId}</em> / {student.name}</td>{calendar.map((day) => <td key={day.date} className={day.isHoliday ? "ar-cell-holiday" : ""}>{mark(student, day)}</td>)}
         <td className="ar-present">{student.presentCount}</td><td className="ar-absent">{student.absentCount}</td><td>{student.totalDays}</td><td><i className={Number(student.percentage) >= 75 ? "ar-good" : "ar-low"}>{student.percentage}%</i></td></tr>)}</tbody></table></div>
-      : <p className="ar-message">Is class mein koi student nahi mila.</p>}
-    <footer>Sunday aur manually selected festivals holiday (H) hain. Attendance wali dates aur manually selected working dates school working days mein count hoti hain.</footer>
+      : <p className="ar-message">No students were found in this class.</p>}
+    <footer>Sundays and manually selected festivals are holidays (H). Dates with attendance and manually selected working dates count as school working days.</footer>
   </main>;
 }

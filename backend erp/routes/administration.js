@@ -18,7 +18,7 @@ const defaultUploadsDir = path.join(process.env.LOCALAPPDATA || path.dirname(pro
 const sqliteBaseUrl = process.env.ID_BACKEND_URL || "http://127.0.0.1:4173";
 const idAdminKeyPath = path.join(process.env.LOCALAPPDATA || process.cwd(), "SIRF ID Attendance", "admin.key");
 const getIdAdminKey = () => String(process.env.ERP_ID_ADMIN_KEY || (fs.existsSync(idAdminKeyPath) ? fs.readFileSync(idAdminKeyPath, "utf8") : "")).trim();
-const requireAdmin = (req, res, next) => req.user?.role === "admin" ? next() : res.status(403).json({ message: "Sirf admin is action ko chala sakta hai." });
+const requireAdmin = (req, res, next) => req.user?.role === "admin" ? next() : res.status(403).json({ message: "Only an admin can perform this action." });
 const safeCollections = async () => (await mongoose.connection.db.listCollections({}, { nameOnly: true }).toArray()).map((item) => item.name).filter((name) => !name.startsWith("system."));
 
 const mongoSnapshot = async () => {
@@ -48,7 +48,7 @@ router.get("/admin/backup", auth, requireAdmin, async (_req, res) => {
   try {
     const sqlite = await sqliteRequest("/api/backup");
     if (sqlite.available !== true || !sqlite.tables) {
-      return res.status(503).json({ message: "Full backup nahi bana: ID/QR SQLite backend available nahi hai. Pehle ID backend start karke phir backup lein." });
+      return res.status(503).json({ message: "Could not create a full backup: the ID/QR SQLite backend is unavailable. Start the ID backend and try again." });
     }
     const mongo = await mongoSnapshot();
     const uploads = uploadSnapshot();
@@ -69,22 +69,22 @@ router.get("/admin/backup", auth, requireAdmin, async (_req, res) => {
     res.setHeader("Content-Disposition", `attachment; filename=school-erp-backup-${stamp}.json`);
     res.type("application/json").send(EJSON.stringify(backup, { relaxed: false }));
   } catch (error) {
-    res.status(500).json({ message: `Backup create nahi hua: ${error.message}` });
+    res.status(500).json({ message: `Could not create the backup: ${error.message}` });
   }
 });
 
 router.post("/admin/restore", auth, requireAdmin, backupUpload.single("backup"), async (req, res) => {
   try {
-    if (req.body?.confirmation !== "RESTORE SCHOOL DATA") return res.status(400).json({ message: "Restore confirmation phrase sahi nahi hai." });
-    if (!req.file) return res.status(400).json({ message: "Backup JSON file select karein." });
+    if (req.body?.confirmation !== "RESTORE SCHOOL DATA") return res.status(400).json({ message: "The restore confirmation phrase is incorrect." });
+    if (!req.file) return res.status(400).json({ message: "Select a backup JSON file." });
     const backup = EJSON.parse(req.file.buffer.toString("utf8"));
-    if (!["school-erp-backup-v1", BACKUP_FORMAT].includes(backup.format) || !backup.mongo || !backup.sqlite?.tables || !Array.isArray(backup.uploads)) return res.status(400).json({ message: "Invalid ya incomplete School ERP backup file." });
-    if (!getIdAdminKey()) return res.status(503).json({ message: "Safe SQLite restore ke liye ID backend ko ek baar start karein, taki local restore security key taiyar ho. Koi data change nahi hua." });
+    if (!["school-erp-backup-v1", BACKUP_FORMAT].includes(backup.format) || !backup.mongo || !backup.sqlite?.tables || !Array.isArray(backup.uploads)) return res.status(400).json({ message: "Invalid or incomplete School ERP backup file." });
+    if (!getIdAdminKey()) return res.status(503).json({ message: "Start the ID backend once to prepare the local restore security key for a safe SQLite restore. No data has been changed." });
 
     const safetyDirectory = path.join(process.cwd(), "backups");
     fs.mkdirSync(safetyDirectory, { recursive: true });
     const currentSqlite = await sqliteRequest("/api/backup");
-    if (currentSqlite.available !== true || !currentSqlite.tables) return res.status(503).json({ message: "Current SQLite data ka safety backup nahi ban saka. ID backend start karke phir restore karein." });
+    if (currentSqlite.available !== true || !currentSqlite.tables) return res.status(503).json({ message: "Could not create a safety backup of the current SQLite data. Start the ID backend and try restoring again." });
     const safety = { format: BACKUP_FORMAT, createdAt: new Date().toISOString(), reason: "automatic-pre-restore", mongo: await mongoSnapshot(), sqlite: currentSqlite, uploads: uploadSnapshot() };
     fs.writeFileSync(path.join(safetyDirectory, `pre-restore-${Date.now()}.json`), EJSON.stringify(safety, { relaxed: false }));
 
@@ -114,9 +114,9 @@ router.post("/admin/restore", auth, requireAdmin, backupUpload.single("backup"),
       const safeName = path.basename(String(file.name || ""));
       if (safeName && file.data) fs.writeFileSync(path.join(uploadsDirectory, safeName), Buffer.from(file.data, "base64"));
     }
-    res.json({ success: true, reauthRequired: true, message: "Backup restore ho gaya. Security ke liye ab dobara login karein.", sqlite });
+    res.json({ success: true, reauthRequired: true, message: "Backup restored. Log in again for security.", sqlite });
   } catch (error) {
-    res.status(500).json({ message: `Restore nahi hua: ${error.message}` });
+    res.status(500).json({ message: `Could not restore: ${error.message}` });
   }
 });
 
@@ -146,7 +146,7 @@ router.get("/admin/student-validation", auth, async (req, res) => {
     const duplicates = [...duplicateMap("admissionNo"), ...duplicateMap("EnrollmentNo"), ...duplicateMap("ApaarId"), ...duplicateMap("PenNo")];
     res.json({ totalStudents: students.length, affectedStudents: issues.length, issueCount: issues.reduce((sum, item) => sum + item.missing.length + item.invalid.length, 0) + duplicates.length, issues, duplicates });
   } catch (error) {
-    res.status(500).json({ message: `Validation report nahi bani: ${error.message}` });
+    res.status(500).json({ message: `Could not generate the validation report: ${error.message}` });
   }
 });
 
@@ -160,39 +160,39 @@ router.post("/admin/users", auth, requireAdmin, async (req, res) => {
     const cleanRole = String(role || "").trim().toLowerCase();
     const cleanEmail = String(email || "").trim().toLowerCase();
     const cleanUsername = String(username || "").trim();
-    if (!["admin", "teacher"].includes(cleanRole) || !cleanUsername || !/^\S+@\S+\.\S+$/.test(cleanEmail) || String(password || "").length < 8) return res.status(422).json({ message: "Admin/Teacher role, username, valid email aur 8+ character password required hai." });
-    if (await User.exists({ email: cleanEmail })) return res.status(409).json({ message: "Is email ka login pehle se bana hua hai." });
+    if (!["admin", "teacher"].includes(cleanRole) || !cleanUsername || !/^\S+@\S+\.\S+$/.test(cleanEmail) || String(password || "").length < 8) return res.status(422).json({ message: "An Admin/Teacher role, username, valid email and password of at least 8 characters are required." });
+    if (await User.exists({ email: cleanEmail })) return res.status(409).json({ message: "A login already exists for this email." });
     let linkedTeacher = null;
     if (cleanRole === "teacher") {
-      if (!teacherId) return res.status(422).json({ message: "Teacher login ke liye teacher select karein." });
+      if (!teacherId) return res.status(422).json({ message: "Select a teacher to create a teacher login." });
       linkedTeacher = await Teacher.findOne({ _id: teacherId, status: "Active" }).lean();
-      if (!linkedTeacher) return res.status(422).json({ message: "Selected teacher active nahi hai." });
-      if (await User.exists({ teacherId })) return res.status(409).json({ message: "Is teacher ka login pehle se bana hua hai." });
+      if (!linkedTeacher) return res.status(422).json({ message: "The selected teacher is inactive." });
+      if (await User.exists({ teacherId })) return res.status(409).json({ message: "A login already exists for this teacher." });
     }
     const user = await User.create({ username: cleanUsername, email: cleanEmail, password: await bcrypt.hash(password, 10), role: cleanRole, teacherId: linkedTeacher?._id || null, active: true, permissions: [] });
     await AllowedUser.findOneAndUpdate({ email: cleanEmail }, { username: cleanUsername, email: cleanEmail, role: cleanRole }, { upsert: true, new: true, setDefaultsOnInsert: true });
-    res.status(201).json({ message: `${cleanRole === "admin" ? "Admin" : "Teacher"} login create ho gaya.`, user: await User.findById(user._id).select("username email role active permissions teacherId createdAt").lean() });
+    res.status(201).json({ message: `${cleanRole === "admin" ? "Admin" : "Teacher"} login created.`, user: await User.findById(user._id).select("username email role active permissions teacherId createdAt").lean() });
   } catch (error) { res.status(500).json({ message: error.message }); }
 });
 router.put("/admin/users/:id/access", auth, requireAdmin, async (req, res) => {
   try {
     const roles = ["admin", "teacher"];
     const { role, active, permissions = [] } = req.body;
-    if (!roles.includes(role) || !Array.isArray(permissions)) return res.status(400).json({ message: "Valid role aur permissions required hain." });
-    if (String(req.params.id) === String(req.user.id) && active === false) return res.status(400).json({ message: "Aap apna admin account inactive nahi kar sakte." });
+    if (!roles.includes(role) || !Array.isArray(permissions)) return res.status(400).json({ message: "A valid role and permissions are required." });
+    if (String(req.params.id) === String(req.user.id) && active === false) return res.status(400).json({ message: "You cannot deactivate your own admin account." });
     const user = await User.findByIdAndUpdate(req.params.id, { role, active: active !== false, permissions: permissions.map(String).slice(0, 50) }, { new: true }).select("username email role active permissions");
-    if (!user) return res.status(404).json({ message: "User nahi mila." });
-    res.json({ success: true, user, message: "User access update ho gaya. Naya role next request se apply hoga." });
+    if (!user) return res.status(404).json({ message: "User not found." });
+    res.json({ success: true, user, message: "User access updated. The new role will apply from the next request." });
   } catch (error) { res.status(500).json({ message: error.message }); }
 });
 router.put("/admin/users/:id/password", auth, requireAdmin, async (req, res) => {
   try {
     const password = String(req.body?.password || "");
-    if (password.length < 8) return res.status(422).json({ message: "Password kam se kam 8 characters ka hona chahiye." });
+    if (password.length < 8) return res.status(422).json({ message: "The password must contain at least 8 characters." });
     const user = await User.findOne({ _id: req.params.id, role: { $in: ["admin", "teacher"] } });
-    if (!user) return res.status(404).json({ message: "Login account nahi mila." });
+    if (!user) return res.status(404).json({ message: "Login account not found." });
     user.password = await bcrypt.hash(password, 10); await user.save();
-    res.json({ success: true, message: "Naya password save ho gaya." });
+    res.json({ success: true, message: "New password saved." });
   } catch (error) { res.status(500).json({ message: error.message }); }
 });
 router.get("/admin/audit-logs", auth, requireAdmin, async (req, res) => {

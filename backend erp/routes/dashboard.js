@@ -6,7 +6,7 @@ const { isValidAcademicSession, sessionStudentQuery } = require("../utils/academ
 router.get("/dashboard", auth, async (req, res) => {
   try {
     const { academicSession } = req.query;
-    if (!isValidAcademicSession(academicSession)) return res.status(400).json({ message: "Valid academicSession query required hai." });
+    if (!isValidAcademicSession(academicSession)) return res.status(400).json({ message: "A valid academicSession query is required." });
     // 💡 countDocuments completely live calculation bhejta hai bina cache ke
     const totalStudentsCount = await Student.countDocuments(sessionStudentQuery(academicSession));
 

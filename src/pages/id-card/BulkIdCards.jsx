@@ -100,7 +100,7 @@ const BulkIdCards = ({ importedStudents = [], config, cardType = "student", onBa
       </header>
 
       {!filteredStudents.length ? (
-        <p className="bulk-idcards-status">{cardType === "teacher" ? "Koi active teacher load nahi hua hai." : "Excel file se koi student record load nahi hua hai."}</p>
+        <p className="bulk-idcards-status">{cardType === "teacher" ? "No active teachers have been loaded." : "No student records have been loaded from the Excel file."}</p>
       ) : (
         <div className={`bulk-idcards-sheets screen-${config.orientation}`} style={sheetStyle}>
           {studentSheets.map((sheet, sheetIndex) => <React.Fragment key={sheetIndex}>

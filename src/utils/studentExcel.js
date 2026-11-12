@@ -71,9 +71,9 @@ export const downloadIdCardWorkbook = (students, academicSession, fileName = "id
 
   const instructions = XLSX.utils.aoa_to_sheet([
     ["ID CARD EXCEL - IMPORTANT INSTRUCTIONS"],
-    ["Admission_No ko blank ya change na karein; QR aur Mongo attendance isi se match hoti hai."],
-    ["Name, Class, Father_Name, Phone, Address aur Photo_URL ko zarurat ke hisab se edit kar sakte hain."],
-    ["File save karne ke baad ID Card Studio > Load Excel se isi workbook ko import karein."],
+    ["Do not leave Admission_No blank or change it; QR and MongoDB attendance match using this number."],
+    ["Edit Name, Class, Father_Name, Phone, Address and Photo_URL as needed."],
+    ["After saving the file, import this workbook using ID Card Studio > Load Excel."],
   ]);
   instructions["A1"].s = { font: { bold: true, color: { rgb: "FFFFFF" }, sz: 14 }, fill: { patternType: "solid", fgColor: { rgb: "059669" } } };
   instructions["!cols"] = [{ wch: 105 }];
@@ -144,9 +144,9 @@ export const downloadTeacherIdCardWorkbook = (teachers, fileName = "teacher-id-c
 
   const instructions = XLSX.utils.aoa_to_sheet([
     ["TEACHER ID CARD EXCEL - IMPORTANT INSTRUCTIONS"],
-    ["Employee_ID ko blank ya change na karein; Barcode aur attendance isi se match hoti hai."],
-    ["Name, Father_Name, DOB, Designation, Mobile_No, Address aur Photo_URL ko zarurat ke hisab se edit kar sakte hain."],
-    ["File save karne ke baad ID Card Studio > Load Teacher Excel se isi workbook ko import karein."],
+    ["Do not leave Employee_ID blank or change it; barcodes and attendance match using this number."],
+    ["Edit Name, Father_Name, DOB, Designation, Mobile_No, Address and Photo_URL as needed."],
+    ["After saving the file, import this workbook using ID Card Studio > Load Teacher Excel."],
   ]);
   instructions["A1"].s = { font: { bold: true, color: { rgb: "FFFFFF" }, sz: 14 }, fill: { patternType: "solid", fgColor: { rgb: "059669" } } };
   instructions["!cols"] = [{ wch: 105 }];

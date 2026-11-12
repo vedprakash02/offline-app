@@ -25,7 +25,7 @@ export default function SalaryPayroll() {
       setTeachers(data.teachers || []);
       setSummary(data.summary || {});
     } catch (error) {
-      setNotice(error.response?.data?.message || "Payroll data load nahi hua.");
+      setNotice(error.response?.data?.message || "Could not load payroll data.");
     }
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -53,7 +53,7 @@ export default function SalaryPayroll() {
       close();
       load();
     } catch (error) {
-      setNotice(error.response?.data?.message || "Salary structure save nahi hua.");
+      setNotice(error.response?.data?.message || "Could not save the salary structure.");
     }
   };
   const savePayment = async (event) => {
@@ -64,16 +64,16 @@ export default function SalaryPayroll() {
       close();
       load();
     } catch (error) {
-      setNotice(error.response?.data?.message || "Payment save nahi hui.");
+      setNotice(error.response?.data?.message || "Could not save the payment.");
     }
   };
 
   return <main className="teacher-page salary-page">
-    <header><div><span className="eyebrow">PAYROLL CENTER</span><h1>Salary & Payroll</h1><p>Pay structure, deductions aur month-wise salary payments manage karein.</p></div></header>
+    <header><div><span className="eyebrow">PAYROLL CENTER</span><h1>Salary & Payroll</h1><p>Manage pay structures, deductions and monthly salary payments.</p></div></header>
     {notice && <div className="notice" onClick={() => setNotice("")}>{notice}<FiX /></div>}
     <section className="stats"><article><FiDollarSign /><div><span>Active staff</span><strong>{summary.active || 0}</strong></div></article><article><FiDollarSign /><div><span>Monthly payroll</span><strong>{money(summary.monthlyPayroll)}</strong></div></article><article><FiDollarSign /><div><span>Total paid</span><strong>{money(summary.paid)}</strong></div></article></section>
     <section className="panel"><div className="toolbar"><strong>Staff payroll register</strong><span>{teachers.length} records</span></div><div className="teacher-grid">{teachers.map((teacher) => <article className="teacher-card" key={teacher._id}><div className="avatar">{teacher.image ? <img src={`${API}/uploads/${teacher.image}`} alt={teacher.name} /> : teacher.name.slice(0, 2).toUpperCase()}</div><div className="teacher-info"><h3>{teacher.name}</h3><p>{teacher.employeeId} · {teacher.designation}</p><div className="salary"><span>Net payable / month</span><strong>{money(teacher.monthlySalary)}</strong></div><small>Gross {money(allowances.reduce((sum, [key]) => sum + Number(teacher.salaryStructure?.[key] || 0), 0) || teacher.monthlySalary)} · Deductions {money(deductions.reduce((sum, [key]) => sum + Number(teacher.salaryStructure?.[key] || 0), 0))}</small><div className="actions"><button onClick={() => openStructure(teacher)}><FiEdit3 /> Pay structure</button><button onClick={() => openPayment(teacher)}><FiPlus /> Pay salary</button></div></div></article>)}</div></section>
-    {mode === "structure" && <div className="modal"><form className="dialog pay-dialog profile-form" onSubmit={saveStructure}><div className="dialog-head"><div><span className="eyebrow">SALARY STRUCTURE</span><h2>{selected.name}</h2><p>Allowances aur deductions configure karein.</p></div><button className="icon" type="button" onClick={close}><FiX /></button></div><div className="form-grid">{allowances.map(([key, label]) => <label key={key}><span>{label}</span><input type="number" min="0" value={structure[key]} onChange={(event) => setStructure({ ...structure, [key]: event.target.value })} /></label>)}{deductions.map(([key, label]) => <label key={key}><span>{label}</span><input type="number" min="0" value={structure[key]} onChange={(event) => setStructure({ ...structure, [key]: event.target.value })} /></label>)}<div className="wide payroll-totals"><span>Gross: <strong>{money(gross)}</strong></span><span>Deductions: <strong>{money(deductionTotal)}</strong></span><span>Net payable: <strong>{money(Math.max(0, gross - deductionTotal))}</strong></span></div></div><div className="form-actions"><button type="button" onClick={close}>Cancel</button><button className="primary">Save Structure</button></div></form></div>}
+    {mode === "structure" && <div className="modal"><form className="dialog pay-dialog profile-form" onSubmit={saveStructure}><div className="dialog-head"><div><span className="eyebrow">SALARY STRUCTURE</span><h2>{selected.name}</h2><p>Configure allowances and deductions.</p></div><button className="icon" type="button" onClick={close}><FiX /></button></div><div className="form-grid">{allowances.map(([key, label]) => <label key={key}><span>{label}</span><input type="number" min="0" value={structure[key]} onChange={(event) => setStructure({ ...structure, [key]: event.target.value })} /></label>)}{deductions.map(([key, label]) => <label key={key}><span>{label}</span><input type="number" min="0" value={structure[key]} onChange={(event) => setStructure({ ...structure, [key]: event.target.value })} /></label>)}<div className="wide payroll-totals"><span>Gross: <strong>{money(gross)}</strong></span><span>Deductions: <strong>{money(deductionTotal)}</strong></span><span>Net payable: <strong>{money(Math.max(0, gross - deductionTotal))}</strong></span></div></div><div className="form-actions"><button type="button" onClick={close}>Cancel</button><button className="primary">Save Structure</button></div></form></div>}
     {mode === "payment" && <div className="modal"><form className="dialog pay-dialog" onSubmit={savePayment}><div className="dialog-head"><div><span className="eyebrow">SALARY PAYMENT</span><h2>{selected.name}</h2><p>{selected.employeeId} · {money(selected.monthlySalary)} payable</p></div><button className="icon" type="button" onClick={close}><FiX /></button></div><div className="pay-form"><label>Salary month<input type="month" required value={payment.month} onChange={(event) => setPayment({ ...payment, month: event.target.value })} /></label><label>Amount<input type="number" min="1" required value={payment.amount} onChange={(event) => setPayment({ ...payment, amount: event.target.value })} /></label><label>Mode<select value={payment.mode} onChange={(event) => setPayment({ ...payment, mode: event.target.value })}>{["Bank Transfer", "Cash", "UPI", "Cheque", "Other"].map((item) => <option key={item}>{item}</option>)}</select></label><label>Note<input value={payment.note} onChange={(event) => setPayment({ ...payment, note: event.target.value })} /></label></div><div className="form-actions"><button type="button" onClick={close}>Cancel</button><button className="primary">Record Payment</button></div></form></div>}
   </main>;
 }

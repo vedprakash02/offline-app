@@ -109,17 +109,17 @@ function StudentPromotion() {
 
   const fetchPromotionList = async () => {
     if (!filters.class) {
-      setError("Kripya class select karein.");
+      setError("Select a class.");
       return;
     }
     if ((filters.class === "11th" || filters.class === "12th") && !filters.stream) {
-      setError("Kripya 11th/12th ke liye stream select karein.");
+      setError("Select a stream for Classes 11 and 12.");
       return;
     }
 
     const token = localStorage.getItem("token");
     if (!token) {
-      setError("Session expire ho gaya hai. Kripya login karein.");
+      setError("Your session has expired. Please log in.");
       return;
     }
 
@@ -162,7 +162,7 @@ function StudentPromotion() {
       setStudents([]);
       setSubjects([]);
       setMarksMatrix([]);
-      setError(err.response?.data?.message || "Student promotion list load nahi ho payi.");
+      setError(err.response?.data?.message || "Could not load the student promotion list.");
     } finally {
       setLoading(false);
     }
@@ -192,20 +192,20 @@ function StudentPromotion() {
     const selectedStream = targetStreams[student._id] || student.stream || "";
 
     if (!nextClass) {
-      setError("12th ke baad next class set nahi hai.");
+      setError("No next class is configured after Class 12.");
       return;
     }
     if ((nextClass === "11th" || nextClass === "12th") && !selectedStream) {
-      setError("Promotion ke liye target stream select karein.");
+      setError("Select a target stream for promotion.");
       return;
     }
     if (!targetAcademicSession) {
-      setError("Naya academic session target taiyar nahi ho paya.");
+      setError("Could not prepare the new target academic session.");
       return;
     }
 
     const confirmPromote = window.confirm(
-      `${student.name} ko ${student.class} se ${nextClass} me (${targetAcademicSession}) session me promote karna hai?`
+      `Promote ${student.name} from ${student.class} to ${nextClass} for Session ${targetAcademicSession}?`
     );
     if (!confirmPromote) return;
 
@@ -233,12 +233,12 @@ function StudentPromotion() {
         },
       });
 
-      setMessage(res.data?.message || `${student.name} successfully promote ho gaya.`);
+      setMessage(res.data?.message || `${student.name} has been promoted successfully.`);
       // List se hata rahe hain kyunki ab woh naye session aur class me ja chuka hai
       setStudents((prev) => prev.filter((item) => item._id !== student._id));
     } catch (err) {
       console.error("Student promote error:", err);
-      setError(err.response?.data?.message || "Student promote nahi ho paya.");
+      setError(err.response?.data?.message || "Could not promote the student.");
     } finally {
       setPromotingId("");
     }
@@ -250,7 +250,7 @@ function StudentPromotion() {
       <div className="student-promo-header">
         <div>
           <h2>Student Promotion</h2>
-          <p>Class-wise result check karke passed students ko next class me bhejein.</p>
+          <p>Check class-wise results and promote students who have passed to the next class.</p>
         </div>
       </div>
 
@@ -407,7 +407,7 @@ function StudentPromotion() {
             ) : (
               <tr>
                 <td colSpan="11" className="student-promo-empty">
-                  Class filter select karke students load karein.
+                  Select a class filter to load students.
                 </td>
               </tr>
             )}

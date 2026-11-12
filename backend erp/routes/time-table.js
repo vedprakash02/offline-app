@@ -21,7 +21,7 @@ router.get("/time-table", auth, async (req, res) => {
     const { examType, academicYear } = req.query;
     
     if (!examType || !academicYear) {
-      return res.status(400).json({ message: "Exam type aur academic year required hai." });
+      return res.status(400).json({ message: "An exam type and academic year are required." });
     }
 
     const record = await TimeTable.findOne({
@@ -31,8 +31,8 @@ router.get("/time-table", auth, async (req, res) => {
 
     return res.json({ schedule: record?.schedule || {}, examTimes: record?.examTimes || {} });
   } catch (error) {
-    console.error("Time table load nahi hua:", error);
-    return res.status(500).json({ message: "Time table load nahi hua." });
+    console.error("Could not load the timetable:", error);
+    return res.status(500).json({ message: "Could not load the timetable." });
   }
 });
 
@@ -42,7 +42,7 @@ router.post("/time-table", auth, async (req, res) => {
     const { examType, academicYear, schedule, examTimes = {} } = req.body;
     
     if (!examType || !academicYear) {
-      return res.status(400).json({ message: "Exam type aur academic year required hai." });
+      return res.status(400).json({ message: "An exam type and academic year are required." });
     }
 
     if (!schedule || typeof schedule !== "object") {
@@ -62,13 +62,13 @@ router.post("/time-table", auth, async (req, res) => {
     ).lean();
 
     return res.json({
-      message: "Time table save ho gaya.",
+      message: "Timetable saved.",
       schedule: record.schedule,
       examTimes: record.examTimes || {}
     });
   } catch (error) {
-    console.error("Time table save nahi hua:", error);
-    return res.status(500).json({ message: "Time table save nahi hua." });
+    console.error("Could not save the timetable:", error);
+    return res.status(500).json({ message: "Could not save the timetable." });
   }
 });
 

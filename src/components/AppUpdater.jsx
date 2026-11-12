@@ -28,7 +28,7 @@ export default function AppUpdater() {
 
   const install = async () => {
     setBusy(true);
-    setStatus("Update download ho raha hai...");
+    setStatus("Downloading update...");
     try {
       let downloaded = 0;
       let contentLength = 0;
@@ -40,7 +40,7 @@ export default function AppUpdater() {
           setProgress(contentLength ? Math.round((downloaded / contentLength) * 100) : 0);
         } else if (event.event === "Finished") {
           setProgress(100);
-          setStatus("Update install ho raha hai...");
+          setStatus("Installing update...");
         }
       });
       await relaunch();
@@ -57,11 +57,11 @@ export default function AppUpdater() {
       <section className="app-update-dialog">
         <span className="app-update-kicker">Vidya Prabandh update</span>
         <h2 id="app-update-title"> update now </h2>
-        <p>Version {update.version} install karein. App update ke baad automatically restart hogi.</p>
+        <p>Version {update.version} Install the update. The app will restart automatically after updating.</p>
         {busy && <div className="app-update-progress"><span style={{ width: `${progress}%` }} /></div>}
         {status && <small className="app-update-status" style={{ display: 'block', wordBreak: 'break-word', color: status.startsWith('Update fail') ? '#dc2626' : 'inherit' }}>{status}</small>}
         <div className="app-update-actions">
-          {!busy && <button type="button" className="app-update-later" onClick={() => setUpdate(null)}>Baad mein</button>}
+          {!busy && <button type="button" className="app-update-later" onClick={() => setUpdate(null)}>Later</button>}
           <button type="button" className="app-update-install" onClick={install} disabled={busy}>{busy ? `${progress || ""}% Downloading...` : "Update now"}</button>
         </div>
       </section>

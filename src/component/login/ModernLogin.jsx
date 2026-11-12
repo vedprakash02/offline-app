@@ -27,7 +27,7 @@ export default function ModernLogin() {
           else { setMessage(data.message || "This account does not have access."); setIsError(true); }
         }, 800);
       } else { setMessage(data.message || "Email or password is incorrect."); setIsError(true); }
-    } catch (error) { console.error("Login Error:", error); setMessage("Server se connect nahi ho pa raha hai!"); setIsError(true); }
+    } catch (error) { console.error("Login Error:", error); setMessage("Could not connect to the server."); setIsError(true); }
     finally { setLoading(false); }
   };
 

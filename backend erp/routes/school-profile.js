@@ -11,7 +11,7 @@ router.get("/get-school-profile", auth, async (req, res) => {
     if (!profile) {
       return res
         .status(404)
-        .json({ message: "Profile nahi mili, kripya pehle create karein." });
+        .json({ message: "Profile not found. Create a profile first." });
     }
 
     // Agar profile mil gayi toh send kar do
@@ -35,13 +35,13 @@ router.post("/save-school-profile",
 
       if (!userId) {
         return res.status(400).json({
-          message: "Validation Error: userId ya teacherId missing hai.",
+          message: "Validation error: userId or teacherId is missing.",
         });
       }
 
       if (userRole !== "teacher" && userRole !== "admin") {
         return res.status(403).json({
-          message: "Permission Denied: Aap school profile save nahi kar sakte.",
+          message: "Permission denied: you cannot save the school profile.",
         });
       }
 

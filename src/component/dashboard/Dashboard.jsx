@@ -35,7 +35,7 @@ function Dashboard() {
         setStats((current) => ({ ...current, totalStudents: res.data.totalStudents || 0, totalClasses: res.data.totalClasses || 4, examsConducted: res.data.examsConducted || 1, pendingEntries: res.data.pendingEntries || 0 }));
       } catch (requestError) {
         console.error('Error fetching dashboard count:', requestError);
-        setError('Session expired ya data load nahi ho paya.');
+        setError('Your session has expired or the data could not be loaded.');
         if (requestError.response?.status === 401) { localStorage.clear(); navigate('/login'); }
       }
     };
@@ -43,7 +43,7 @@ function Dashboard() {
       try {
         const data = await attendanceApi.getRecords(today());
         setStats((current) => ({ ...current, todayPresent: data.present || 0, todayAbsent: data.absent || 0 }));
-      } catch (attendanceError) { console.error('Dashboard attendance count load nahi hua:', attendanceError); }
+      } catch (attendanceError) { console.error('Could not load dashboard attendance counts:', attendanceError); }
     };
     const fetchFeeSummary = async () => {
       if (!['admin', 'teacher'].includes(userRole)) { setFeesLoading(false); return; }
@@ -51,10 +51,10 @@ function Dashboard() {
         const res = await axios.get('http://localhost:3000/fees', { headers: { Authorization: `Bearer ${token}` }, params: { academicSession: localStorage.getItem('activeSession') } });
         setFeeSummary(res.data.summary || { totalDemand: 0, totalPaid: 0, totalBalance: 0, records: 0 });
       } catch (feeError) {
-        console.error('Dashboard fee summary load nahi hui:', feeError);
+        console.error('Could not load the dashboard fee summary:', feeError);
       } finally { setFeesLoading(false); }
     };
-    const fetchTeachers = async () => { if (!["admin", "principal", "accountant"].includes(userRole)) return; try { const { data } = await axios.get("http://localhost:3000/teachers", { headers: { Authorization: `Bearer ${token}` }, params: { status: "Active" } }); setTeachers(data.teachers || []); } catch (teacherError) { console.error("Dashboard teachers load nahi hue:", teacherError); } };
+    const fetchTeachers = async () => { if (!["admin", "principal", "accountant"].includes(userRole)) return; try { const { data } = await axios.get("http://localhost:3000/teachers", { headers: { Authorization: `Bearer ${token}` }, params: { status: "Active" } }); setTeachers(data.teachers || []); } catch (teacherError) { console.error("Could not load dashboard teachers:", teacherError); } };
     fetchDashboardStats(); fetchAttendanceStats(); fetchFeeSummary(); fetchTeachers();
   }, [navigate]);
 
@@ -69,7 +69,7 @@ function Dashboard() {
     <section className="academic-setup-card" aria-label="Academic setup">
       <button type="button" onClick={() => navigate('/dashboard/academic-subjects')}>
         <span className="academic-setup-icon"><FiBookOpen /></span>
-        <span className="academic-setup-copy"><small>Academic setup</small><strong>Class subjects</strong><em>Nursery se 12th tak subjects customize karein</em></span>
+        <span className="academic-setup-copy"><small>Academic setup</small><strong>Class subjects</strong><em>Customize subjects from Nursery to Class 12</em></span>
         <FiArrowRight className="academic-setup-arrow" />
       </button>
     </section>
@@ -80,7 +80,7 @@ function Dashboard() {
       <article className="stat-card rate-card"><div className="card-icon"><FiClipboard /></div><div className="card-info"><span>Attendance rate</span><strong>{attendanceRate}%</strong><small>{totalMarked} records marked today</small></div></article>
     </section>
     {['admin', 'teacher'].includes(currentRole) && <section className="fee-overview" aria-label="Fee overview">
-      <div className="fee-overview-heading"><div className="fee-title-icon"><FiDollarSign /></div><div><span>Active session</span><h2>Fee overview</h2><p>{feesLoading ? 'Fee summary load ho rahi hai...' : `${feeSummary.records} fee records ka summary`}</p></div><button onClick={() => navigate('/dashboard/fees')}>Manage fees <FiArrowRight /></button></div>
+      <div className="fee-overview-heading"><div className="fee-title-icon"><FiDollarSign /></div><div><span>Active session</span><h2>Fee overview</h2><p>{feesLoading ? 'Loading fee summary...' : `Summary of ${feeSummary.records} fee records`}</p></div><button onClick={() => navigate('/dashboard/fees')}>Manage fees <FiArrowRight /></button></div>
       <div className="fee-metrics">
         <div><span>Total demand</span><strong>{feesLoading ? '�' : formatCurrency(feeSummary.totalDemand)}</strong><small>Generated fee amount</small></div>
         <div className="fee-collected"><span>Collected</span><strong>{feesLoading ? '�' : formatCurrency(feeSummary.totalPaid)}</strong><small>{collectionRate}% collection rate</small></div>
@@ -88,7 +88,7 @@ function Dashboard() {
       </div>
       <div className="fee-progress" aria-label={`${collectionRate}% fees collected`}><span style={{ width: `${collectionRate}%` }} /></div>
     </section>}
-    {teachers.length > 0 && <section className="dashboard-teachers"><div className="dashboard-teachers-head"><div><span>Our faculty</span><h2>Teacher profiles</h2><p>Profile, attendance aur payment history dekhne ke liye card select karein.</p></div><button onClick={() => navigate("/dashboard/teachers")}>Manage all <FiArrowRight /></button></div><div className="dashboard-teacher-track">{teachers.slice(0, 8).map((teacher) => <button className="dashboard-teacher-card" key={teacher._id} onClick={() => navigate(`/dashboard/teachers/${teacher._id}`)}><div className="dashboard-teacher-photo">{teacher.image ? <img src={`http://localhost:3000/uploads/${teacher.image}`} alt={teacher.name} /> : teacher.name.slice(0, 2).toUpperCase()}</div><div><strong>{teacher.name}</strong><span>{teacher.designation}</span><small>{teacher.employeeId} � {teacher.subjects?.slice(0, 2).join(", ") || "Faculty"}</small></div><FiArrowRight /></button>)}</div></section>}
+    {teachers.length > 0 && <section className="dashboard-teachers"><div className="dashboard-teachers-head"><div><span>Our faculty</span><h2>Teacher profiles</h2><p>Select a card to view the profile, attendance and payment history.</p></div><button onClick={() => navigate("/dashboard/teachers")}>Manage all <FiArrowRight /></button></div><div className="dashboard-teacher-track">{teachers.slice(0, 8).map((teacher) => <button className="dashboard-teacher-card" key={teacher._id} onClick={() => navigate(`/dashboard/teachers/${teacher._id}`)}><div className="dashboard-teacher-photo">{teacher.image ? <img src={`http://localhost:3000/uploads/${teacher.image}`} alt={teacher.name} /> : teacher.name.slice(0, 2).toUpperCase()}</div><div><strong>{teacher.name}</strong><span>{teacher.designation}</span><small>{teacher.employeeId} � {teacher.subjects?.slice(0, 2).join(", ") || "Faculty"}</small></div><FiArrowRight /></button>)}</div></section>}
     <section className="dashboard-content-grid"><div className="quick-panel"><div className="section-heading"><div><span>Shortcuts</span><h2>Quick actions</h2></div><p>Your most-used tools in one place</p></div><div className="quicklinks-grid">{quickActions.map(({ label, description, icon: ActionIcon, path, tone }) => <button key={path} onClick={() => navigate(path)} className={`link-action-card ${tone}`}><span className="quick-icon">{React.createElement(ActionIcon)}</span><span className="quick-copy"><strong>{label}</strong><small>{description}</small></span><FiArrowRight className="quick-arrow" /></button>)}</div></div>
       <aside className="attendance-panel"><div className="attendance-panel-icon"><FiClock /></div><span className="panel-kicker">Today&apos;s snapshot</span><h2>{attendanceRate}% attendance</h2><p>{stats.todayPresent} of {totalMarked} marked students are present today.</p><div className="progress-track"><span style={{ width: `${attendanceRate}%` }} /></div><div className="attendance-legend"><span><i className="present-dot" />Present <strong>{stats.todayPresent}</strong></span><span><i className="absent-dot" />Absent <strong>{stats.todayAbsent}</strong></span></div><button className="report-button" onClick={() => navigate('/dashboard/attendance-report')}>Open full report <FiArrowRight /></button></aside></section>
   </div></div>;

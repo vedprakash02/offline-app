@@ -12,7 +12,7 @@ export const readJsonBody = async (request) => {
 
   for await (const chunk of request) {
     totalBytes += chunk.length;
-    if (totalBytes > 100_000_000) throw new Error("Request bahut badi hai.");
+    if (totalBytes > 100_000_000) throw new Error("The request is too large.");
     chunks.push(chunk);
   }
 

@@ -18,7 +18,7 @@ router.get("/all-idcards", auth, async (req, res) => {
 
     // 2. Database se saare bacchon ka data fetch karein
     const { academicSession } = req.query;
-    if (!isValidAcademicSession(academicSession)) return res.status(400).json({ message: "Valid academicSession query required hai." });
+    if (!isValidAcademicSession(academicSession)) return res.status(400).json({ message: "A valid academicSession query is required." });
     const students = (await Student.find(sessionStudentQuery(academicSession)).lean()).map((student) => studentForSession(student, academicSession));
 
     // 3. Response me schoolName aur students dono ek sath bhej dein

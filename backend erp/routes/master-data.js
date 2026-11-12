@@ -10,14 +10,14 @@ router.post("/upload-master-excel",
       const userRole = req.user.role;
       if (userRole !== "teacher" && userRole !== "admin") {
         return res.status(403).json({
-          message: "Permission Denied: Aap naya admission nahi kar sakte.",
+          message: "Permission denied: you cannot create a new admission.",
         });
       }
 
       if (!req.file) {
         return res.status(400).json({
           success: false,
-          message: "Kripya excel file upload karein.",
+          message: "Upload an Excel file.",
         });
       }
 
@@ -30,7 +30,7 @@ router.post("/upload-master-excel",
         if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
         return res.status(400).json({
           success: false,
-          message: "Excel sheet khali hai yan headers galat hain!",
+          message: "The Excel sheet is empty or its headers are incorrect.",
         });
       }
 
@@ -63,7 +63,7 @@ router.post("/upload-master-excel",
 
       return res.status(200).json({
         success: true,
-        message: `Excel sheet se ${insertedCount} naye users master list me save ho gaye!`,
+        message: `Saved ${insertedCount} new users to the master list from Excel.`,
       });
     } catch (error) {
       console.error("Excel upload error:", error);
@@ -73,7 +73,7 @@ router.post("/upload-master-excel",
 
       return res.status(500).json({
         success: false,
-        message: "Excel process karne mein dikkat aayi: " + error.message,
+        message: "Could not process the Excel file:" + error.message,
       });
     }
   },

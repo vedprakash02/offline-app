@@ -37,7 +37,7 @@ export default function MonthlyRegister() {
       setData({ students: [], calendar: [], summary: {} });
       setError(
         err.response?.data?.message ||
-          "Report load nahi ho payi. Backend connection check karein.",
+          "Could not load the report. Check the backend connection.",
       );
     } finally {
       setLoading(false);
@@ -46,13 +46,13 @@ export default function MonthlyRegister() {
 
   const handleManualHolidaySubmit = async (isHolidayAction) => {
     if (!selectedHolidayDate) {
-      alert("Kripya pehle ek date select karein!");
+      alert("Select a date first.");
       return;
     }
 
     const actionText = isHolidayAction ? "Holiday" : "Working Day";
     const confirmAction = window.confirm(
-      `Kya aap Class ${studentClass} ke liye ${selectedHolidayDate} ko ${actionText} banana chahte hain?`,
+      `Mark ${selectedHolidayDate} as ${actionText} for Class ${studentClass}?`,
     );
     if (!confirmAction) return;
 
@@ -65,11 +65,11 @@ export default function MonthlyRegister() {
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      alert(`Date ${selectedHolidayDate} ko successfully ${actionText} mark kar diya gaya hai.`);
+      alert(`${selectedHolidayDate} has been marked as ${actionText}.`);
       setSelectedHolidayDate("");
       await loadReport();
     } catch (err) {
-      alert(err.response?.data?.message || "Holiday update karne mein dikkat aayi.");
+      alert(err.response?.data?.message || "Could not update the holiday.");
     } finally {
       setUpdatingHoliday(false);
     }
@@ -270,12 +270,10 @@ export default function MonthlyRegister() {
           </table>
         </div>
       ) : (
-        <p className="ar-message">Is class mein koi student nahi mila.</p>
+        <p className="ar-message">No students were found in this class.</p>
       )}
       <footer>
-        School working days un dates ko count karta hai jin din is class ki
-        attendance mark ki gayi hai. Sunday aur manual select kiye gaye
-        festivals ko holiday (H) dikhaya gaya hai.
+        School working days count dates with attendance for this class. Sundays and manually selected festivals are shown as holidays (H).
       </footer>
     </div>
   );

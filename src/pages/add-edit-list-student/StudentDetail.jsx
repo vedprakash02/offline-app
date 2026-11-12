@@ -33,7 +33,7 @@ export default function StudentDetail() {
         setStudent(data);
         setLoading(false);
         if (!/^\d{4}-\d{4}$/.test(session)) {
-          setFeeError("Fee details ke liye valid academic session select karein.");
+          setFeeError("Select a valid academic session to view fee details.");
           setFeeLoading(false);
           return;
         }
@@ -43,13 +43,13 @@ export default function StudentDetail() {
           });
           if (active) setFeeLedger(feeResponse.data);
         } catch (feeRequestError) {
-          if (active) setFeeError(feeRequestError.response?.data?.message || "Fee details load nahi hui.");
+          if (active) setFeeError(feeRequestError.response?.data?.message || "Could not load fee details.");
         } finally {
           if (active) setFeeLoading(false);
         }
       } catch (requestError) {
         if (active) {
-          setError(requestError.response?.data?.message || "Student profile load nahi ho payi.");
+          setError(requestError.response?.data?.message || "Could not load the student profile.");
           setLoading(false);
           setFeeLoading(false);
         }
@@ -60,17 +60,17 @@ export default function StudentDetail() {
   }, [id, session]);
 
   const remove = async () => {
-    if (!window.confirm(`Kya aap ${student.name} ka record permanently delete karna chahte hain?`)) return;
+    if (!window.confirm(`Permanently delete the record for ${student.name}?`)) return;
     try {
       await axios.delete(`http://localhost:3000/delete-student/${id}`, { headers: authHeaders() });
       navigate("/dashboard/studentlist", { replace: true });
     } catch (requestError) {
-      setError(requestError.response?.data?.message || "Student delete nahi ho paya.");
+      setError(requestError.response?.data?.message || "Could not delete the student.");
     }
   };
 
-  if (loading) return <div className="profile-state">Student profile load ho rahi hai...</div>;
-  if (error || !student) return <div className="profile-state error"><p>{error || "Student nahi mila."}</p><Link to="/dashboard/studentlist"><FiArrowLeft /> Back to students</Link></div>;
+  if (loading) return <div className="profile-state">Loading student profile...</div>;
+  if (error || !student) return <div className="profile-state error"><p>{error || "Student not found."}</p><Link to="/dashboard/studentlist"><FiArrowLeft /> Back to students</Link></div>;
 
   const photoUrl = student.imageUrl
     ? (/^https?:/i.test(student.imageUrl) ? student.imageUrl : `http://localhost:3000/uploads/${student.imageUrl}`)
@@ -112,14 +112,14 @@ export default function StudentDetail() {
 
       <section className="profile-section wide fee-profile-section">
         <div className="profile-section-title"><FiCreditCard /><h2>Fee details - {session}</h2><Link to="/dashboard/fees">Open Fee Management</Link></div>
-        {feeLoading ? <div className="fee-profile-state">Fee ledger load ho raha hai...</div> : feeError ? <div className="fee-profile-state error">{feeError}</div> : <>
+        {feeLoading ? <div className="fee-profile-state">Loading fee ledger...</div> : feeError ? <div className="fee-profile-state error">{feeError}</div> : <>
           <div className="fee-profile-summary">
             <div><span>Total demand</span><strong>{money(totals.demand)}</strong></div>
             <div className="paid"><span>Total paid</span><strong>{money(totals.paid)}</strong></div>
             <div className={totals.balance > 0 ? "due" : "paid"}><span>Pending balance</span><strong>{money(totals.balance)}</strong></div>
           </div>
           <div className="fee-profile-table-wrap">
-            {feeLedger?.fees?.length ? <table><thead><tr><th>Fee</th><th>Period</th><th>Payable</th><th>Paid</th><th>Balance</th><th>Status</th></tr></thead><tbody>{feeLedger.fees.map((fee) => <tr key={fee._id}><td><strong>{fee.feeName || fee.feeType}</strong></td><td>{fee.month || fee.frequency || "-"}</td><td>{money(fee.payableAmount)}</td><td>{money(fee.paidAmount)}</td><td>{money(fee.balanceAmount)}</td><td><span className={`fee-profile-status ${String(fee.status || "due").toLowerCase()}`}>{fee.status}</span></td></tr>)}</tbody></table> : <div className="fee-profile-state">Is session mein koi fee demand generate nahi hui.</div>}
+            {feeLedger?.fees?.length ? <table><thead><tr><th>Fee</th><th>Period</th><th>Payable</th><th>Paid</th><th>Balance</th><th>Status</th></tr></thead><tbody>{feeLedger.fees.map((fee) => <tr key={fee._id}><td><strong>{fee.feeName || fee.feeType}</strong></td><td>{fee.month || fee.frequency || "-"}</td><td>{money(fee.payableAmount)}</td><td>{money(fee.paidAmount)}</td><td>{money(fee.balanceAmount)}</td><td><span className={`fee-profile-status ${String(fee.status || "due").toLowerCase()}`}>{fee.status}</span></td></tr>)}</tbody></table> : <div className="fee-profile-state">No fee demands have been generated for this session.</div>}
           </div>
         </>}
       </section>

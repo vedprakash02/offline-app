@@ -47,37 +47,37 @@ const getDemoTrialStatus = () => {
   if (!Number.isInteger(months) || months < 1) return null;
   const now = Date.now(); let trial = readDemoTrial();
   if (!trial) { const expiry = new Date(now); expiry.setMonth(expiry.getMonth() + months); trial = { version: 1, machineId, startedAt: dateOnly(now), expiresAt: dateOnly(expiry), lastRunAt: new Date(now).toISOString() }; writeDemoTrial(trial); }
-  if (trial.machineId !== machineId) return { valid: false, code: "LICENSE_MACHINE_MISMATCH", message: "Demo is computer ke liye valid nahi hai." };
+  if (trial.machineId !== machineId) return { valid: false, code: "LICENSE_MACHINE_MISMATCH", message: "This demo is not valid for this computer." };
   const expiry = Date.parse(`${trial.expiresAt}T23:59:59.999Z`); const lastRun = Date.parse(trial.lastRunAt || "");
-  if (!Number.isFinite(expiry)) return { valid: false, code: "LICENSE_INVALID", message: "Demo expiry invalid hai." };
-  if (Number.isFinite(lastRun) && now < lastRun - 5 * 60 * 1000) return { valid: false, code: "CLOCK_TAMPERED", message: "Computer date/time pichhe ki gayi hai. Sahi date set karein." };
+  if (!Number.isFinite(expiry)) return { valid: false, code: "LICENSE_INVALID", message: "The demo expiry date is invalid." };
+  if (Number.isFinite(lastRun) && now < lastRun - 5 * 60 * 1000) return { valid: false, code: "CLOCK_TAMPERED", message: "The computer date/time has been set back. Set the correct date." };
   const license = { licenseId: `DEMO-${machineId.slice(0, 12)}`, schoolName: "Vidya Prabandh Demo", machineId, issuedAt: trial.startedAt, expiresAt: trial.expiresAt, plan: `${months}-month demo`, studentLimit: 0, modules: ["demo"] };
-  if (now > expiry) return { valid: false, expired: true, code: "LICENSE_EXPIRED", message: `3-month demo ${trial.expiresAt} ko expire ho gaya.`, license };
+  if (now > expiry) return { valid: false, expired: true, code: "LICENSE_EXPIRED", message: `The 3-month demo expired on ${trial.expiresAt}.`, license };
   if (!Number.isFinite(lastRun) || now - lastRun > 5 * 60 * 1000) writeDemoTrial({ ...trial, lastRunAt: new Date(now).toISOString() });
-  return { valid: true, code: "LICENSE_VALID", message: "3-month demo active hai.", daysRemaining: Math.max(0, Math.ceil((expiry - now) / 86400000)), license };
+  return { valid: true, code: "LICENSE_VALID", message: "The 3-month demo is active.", daysRemaining: Math.max(0, Math.ceil((expiry - now) / 86400000)), license };
 };
 
 const verifyLicenseObject = (license, { updateClock = true } = {}) => {
   try {
-    if (!license?.signature) return { valid: false, code: "LICENSE_INVALID", message: "License signature missing hai." };
+    if (!license?.signature) return { valid: false, code: "LICENSE_INVALID", message: "The license signature is missing." };
 
     const signatureValid = crypto.verify(null, Buffer.from(canonical(license)), publicKey, Buffer.from(license.signature, "base64"));
-    if (!signatureValid) return { valid: false, code: "LICENSE_INVALID", message: "License file modified ya invalid hai." };
-    if (String(license.machineId).toUpperCase() !== machineId) return { valid: false, code: "LICENSE_MACHINE_MISMATCH", message: "License is computer ke liye issue nahi hua hai." };
+    if (!signatureValid) return { valid: false, code: "LICENSE_INVALID", message: "The license file has been modified or is invalid." };
+    if (String(license.machineId).toUpperCase() !== machineId) return { valid: false, code: "LICENSE_MACHINE_MISMATCH", message: "This license was not issued for this computer." };
     const now = Date.now(); const issued = Date.parse(`${license.issuedAt}T00:00:00.000Z`); const expiry = Date.parse(`${license.expiresAt}T23:59:59.999Z`);
-    if (!Number.isFinite(issued) || !Number.isFinite(expiry) || expiry < issued) return { valid: false, code: "LICENSE_INVALID", message: "License dates invalid hain." };
+    if (!Number.isFinite(issued) || !Number.isFinite(expiry) || expiry < issued) return { valid: false, code: "LICENSE_INVALID", message: "The license dates are invalid." };
     const state = readState(); const lastRun = state?.licenseId === license.licenseId ? Date.parse(state.lastRunAt) : 0;
-    if (lastRun && now < lastRun - 5 * 60 * 1000) return { valid: false, code: "CLOCK_TAMPERED", message: "Computer date/time pichhe ki gayi hai. Sahi date set karein." };
-    if (now > expiry) return { valid: false, expired: true, code: "LICENSE_EXPIRED", message: `License ${license.expiresAt} ko expire ho gaya.`, license: { ...license, signature: undefined } };
-    if (now < issued - 24 * 60 * 60 * 1000) return { valid: false, code: "LICENSE_NOT_STARTED", message: `License ${license.issuedAt} se valid hoga.` };
+    if (lastRun && now < lastRun - 5 * 60 * 1000) return { valid: false, code: "CLOCK_TAMPERED", message: "The computer date/time has been set back. Set the correct date." };
+    if (now > expiry) return { valid: false, expired: true, code: "LICENSE_EXPIRED", message: `The license expired on ${license.expiresAt}.`, license: { ...license, signature: undefined } };
+    if (now < issued - 24 * 60 * 60 * 1000) return { valid: false, code: "LICENSE_NOT_STARTED", message: `The license will be valid from ${license.issuedAt}.` };
     if (updateClock && (!lastRun || now - lastRun > 5 * 60 * 1000)) writeState(license.licenseId, now);
-    return { valid: true, code: "LICENSE_VALID", message: "License active hai.", daysRemaining: Math.max(0, Math.ceil((expiry - now) / 86400000)), license: { ...license, signature: undefined } };
-  } catch (error) { return { valid: false, code: "LICENSE_INVALID", message: `License verify nahi hua: ${error.message}` }; }
+    return { valid: true, code: "LICENSE_VALID", message: "The license is active.", daysRemaining: Math.max(0, Math.ceil((expiry - now) / 86400000)), license: { ...license, signature: undefined } };
+  } catch (error) { return { valid: false, code: "LICENSE_INVALID", message: `Could not verify the license: ${error.message}` }; }
 };
-const getLicenseStatus = () => { if (process.env.DEVELOPER_BYPASS_LICENSE === "1") return { valid: true, code: "DEVELOPER_MODE", message: "Developer license bypass active.", machineId, daysRemaining: 9999, license: { licenseId: "DEVELOPER", schoolName: "Developer workspace", machineId, issuedAt: "2000-01-01", expiresAt: "2099-12-31", plan: "Developer", studentLimit: 0, modules: ["all"] } }; try { return { ...verifyLicenseObject(JSON.parse(fs.readFileSync(licensePath, "utf8"))), machineId }; } catch { const demo = getDemoTrialStatus(); return demo ? { ...demo, machineId } : { valid: false, code: "LICENSE_REQUIRED", message: "Valid license activate karein.", machineId }; } };
+const getLicenseStatus = () => { if (process.env.DEVELOPER_BYPASS_LICENSE === "1") return { valid: true, code: "DEVELOPER_MODE", message: "Developer license bypass active.", machineId, daysRemaining: 9999, license: { licenseId: "DEVELOPER", schoolName: "Developer workspace", machineId, issuedAt: "2000-01-01", expiresAt: "2099-12-31", plan: "Developer", studentLimit: 0, modules: ["all"] } }; try { return { ...verifyLicenseObject(JSON.parse(fs.readFileSync(licensePath, "utf8"))), machineId }; } catch { const demo = getDemoTrialStatus(); return demo ? { ...demo, machineId } : { valid: false, code: "LICENSE_REQUIRED", message: "Activate a valid license.", machineId }; } };
 const activateLicense = (buffer) => {
-  let license; try { license = JSON.parse(buffer.toString("utf8")); } catch { return { valid: false, code: "LICENSE_INVALID", message: "License file JSON valid nahi hai." }; }
+  let license; try { license = JSON.parse(buffer.toString("utf8")); } catch { return { valid: false, code: "LICENSE_INVALID", message: "The license file contains invalid JSON." }; }
   const result = verifyLicenseObject(license, { updateClock: false }); if (!result.valid) return { ...result, machineId };
-  const temporaryPath = `${licensePath}.tmp`; fs.writeFileSync(temporaryPath, JSON.stringify(license, null, 2)); fs.renameSync(temporaryPath, licensePath); writeState(license.licenseId, Date.now()); return { ...result, machineId, message: "License successfully activate ho gaya." };
+  const temporaryPath = `${licensePath}.tmp`; fs.writeFileSync(temporaryPath, JSON.stringify(license, null, 2)); fs.renameSync(temporaryPath, licensePath); writeState(license.licenseId, Date.now()); return { ...result, machineId, message: "License activated successfully." };
 };
 module.exports = { activateLicense, getLicenseStatus, machineId };

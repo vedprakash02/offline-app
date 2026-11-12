@@ -14,13 +14,13 @@ router.post("/admission",
 
       if (!userId) {
         return res.status(400).json({
-          message: "Validation Error: userId missing hai.",
+          message: "Validation error: userId is missing.",
         });
       }
 
       if (userRole !== "teacher" && userRole !== "admin") {
         return res.status(403).json({
-          message: "Permission Denied: Aap naya admission nahi kar sakte.",
+          message: "Permission denied: you cannot create a new admission.",
         });
       }
 
@@ -41,7 +41,7 @@ router.post("/admission",
       
 
       if (!isValidAcademicSession(academicSession)) {
-        return res.status(400).json({ message: "Academic Session chunna zaroori hai!" });
+        return res.status(400).json({ message: "Select an academic session." });
       }
 
       const imageFilename = req.file ? req.file.filename : null;
@@ -53,12 +53,12 @@ router.post("/admission",
       const requiredText = { name, fatherName, motherName, gender, cast, class: studentClass, address, phone };
       const missingField = Object.entries(requiredText).find(([, value]) => !String(value || "").trim());
       if (missingField) return res.status(400).json({ message: `${missingField[0]} is required.` });
-      if (!/^\d{10}$/.test(String(phone))) return res.status(400).json({ message: "Phone number exactly 10 digits ka hona chahiye." });
-      if (AadhaarNo && !/^\d{12}$/.test(String(AadhaarNo))) return res.status(400).json({ message: "Aadhaar number exactly 12 digits ka hona chahiye." });
+      if (!/^\d{10}$/.test(String(phone))) return res.status(400).json({ message: "The phone number must contain exactly 10 digits." });
+      if (AadhaarNo && !/^\d{12}$/.test(String(AadhaarNo))) return res.status(400).json({ message: "The Aadhaar number must contain exactly 12 digits." });
       const birthDate = new Date(dob);
-      if (!dob || Number.isNaN(birthDate.getTime()) || birthDate > new Date()) return res.status(400).json({ message: "Valid date of birth required hai." });
-      if (!["Male", "Female", "Other"].includes(gender)) return res.status(400).json({ message: "Valid gender select karein." });
-      if (!["gen", "obc", "sc", "st"].includes(cast)) return res.status(400).json({ message: "Valid category select karein." });
+      if (!dob || Number.isNaN(birthDate.getTime()) || birthDate > new Date()) return res.status(400).json({ message: "A valid date of birth is required." });
+      if (!["Male", "Female", "Other"].includes(gender)) return res.status(400).json({ message: "Select a valid gender." });
+      if (!["gen", "obc", "sc", "st"].includes(cast)) return res.status(400).json({ message: "Select a valid category." });
       if ((studentClass === "11th" || studentClass === "12th") && !stream) {
         return res
           .status(400)
@@ -114,7 +114,7 @@ router.post("/admission",
         
     } catch (err) {
       console.error("Admission Error:", err);
-      if (err?.code === 11000) return res.status(409).json({ message: "Admission number conflict hua. Please submit again." });
+      if (err?.code === 11000) return res.status(409).json({ message: "Admission number conflict. Please submit again." });
       if (err?.name === "ValidationError") return res.status(400).json({ message: Object.values(err.errors).map((item) => item.message).join(", ") });
       return res
         .status(500)
@@ -127,7 +127,7 @@ router.get("/all-students", auth, async (req, res) => {
   try {
     if (req.user.role === "teacher" || req.user.role === "admin") {
       const { search, studentClass, academicSession } = req.query;
-      if (!isValidAcademicSession(academicSession)) return res.status(400).json({ message: "Valid academicSession query required hai." });
+      if (!isValidAcademicSession(academicSession)) return res.status(400).json({ message: "A valid academicSession query is required." });
       let query = sessionStudentQuery(academicSession);
 
       // Agar class filter select kiya hai
@@ -167,7 +167,7 @@ router.get("/edit-student/:id", auth, async (req, res) => {
 
       // Agar student nahi milta hai
       if (!student) {
-        return res.status(404).json({ message: "Student nahi mila." });
+        return res.status(404).json({ message: "Student not found." });
       }
       return res.status(200).json(student);
     } else {
@@ -182,7 +182,7 @@ router.get("/edit-student/:id", auth, async (req, res) => {
 
     // Agar MongoDB ID galat format me ho (CastError)
     if (err.kind === "ObjectId") {
-      return res.status(400).json({ message: "Sahi ID format nahi hai." });
+      return res.status(400).json({ message: "Invalid ID format." });
     }
 
     return res.status(500).json({ error: err.message });
@@ -196,7 +196,7 @@ router.put("/update-student/:id",
   async (req, res) => {
     try {
       if (req.user.role !== "teacher" && req.user.role !== "admin") {
-        return res.status(403).json({ message: "Student update karne ki permission nahi hai." });
+        return res.status(403).json({ message: "You do not have permission to update students." });
       }
       const { id } = req.params;
 
@@ -220,19 +220,19 @@ router.put("/update-student/:id",
       if (phone && (phone.toString().length !== 10 || isNaN(phone))) {
         return res
           .status(400)
-          .json({ message: "Phone number exactly 10 digits ka hona chahiye." });
+          .json({ message: "The phone number must contain exactly 10 digits." });
       }
 
       // 2. Class 11th aur 12th ke liye stream validation
       const requiredText = { name, fatherName, motherName, gender, cast, class: studentClass, address, phone };
       const missingField = Object.entries(requiredText).find(([, value]) => !String(value || "").trim());
       if (missingField) return res.status(400).json({ message: `${missingField[0]} is required.` });
-      if (!/^\d{10}$/.test(String(phone))) return res.status(400).json({ message: "Phone number exactly 10 digits ka hona chahiye." });
-      if (AadhaarNo && !/^\d{12}$/.test(String(AadhaarNo))) return res.status(400).json({ message: "Aadhaar number exactly 12 digits ka hona chahiye." });
+      if (!/^\d{10}$/.test(String(phone))) return res.status(400).json({ message: "The phone number must contain exactly 10 digits." });
+      if (AadhaarNo && !/^\d{12}$/.test(String(AadhaarNo))) return res.status(400).json({ message: "The Aadhaar number must contain exactly 12 digits." });
       const birthDate = new Date(dob);
-      if (!dob || Number.isNaN(birthDate.getTime()) || birthDate > new Date()) return res.status(400).json({ message: "Valid date of birth required hai." });
-      if (!["Male", "Female", "Other"].includes(gender)) return res.status(400).json({ message: "Valid gender select karein." });
-      if (!["gen", "obc", "sc", "st"].includes(cast)) return res.status(400).json({ message: "Valid category select karein." });
+      if (!dob || Number.isNaN(birthDate.getTime()) || birthDate > new Date()) return res.status(400).json({ message: "A valid date of birth is required." });
+      if (!["Male", "Female", "Other"].includes(gender)) return res.status(400).json({ message: "Select a valid gender." });
+      if (!["gen", "obc", "sc", "st"].includes(cast)) return res.status(400).json({ message: "Select a valid category." });
       if ((studentClass === "11th" || studentClass === "12th") && !stream) {
         return res
           .status(400)
@@ -265,7 +265,7 @@ router.put("/update-student/:id",
       if (!updatedStudent) {
         return res
           .status(404)
-          .json({ message: "Student nahi mila database me." });
+          .json({ message: "Student not found in the database." });
       }
 
       res.status(200).json({
@@ -287,14 +287,14 @@ router.delete("/delete-student/:id", auth, async (req, res) => {
       return res.status(403).json({
         success: false,
         message:
-          "Permission Denied: Aapke paas student delete karne ka right nahi hai.",
+          "Permission denied: you cannot delete students.",
       });
     }
 
     if (!id) {
       return res.status(400).json({
         success: false,
-        message: "Student ID provide karna zaroori hai.",
+        message: "A Student ID is required.",
       });
     }
 
@@ -304,7 +304,7 @@ router.delete("/delete-student/:id", auth, async (req, res) => {
     if (!deletedStudent) {
       return res.status(404).json({
         success: false,
-        message: "Database me is ID ka koi student nahi mila.",
+        message: "No student with this ID was found in the database.",
       });
     }
 
@@ -319,13 +319,13 @@ router.delete("/delete-student/:id", auth, async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Student record successfully delete ho gaya!",
+      message: "Student record deleted successfully.",
     });
   } catch (error) {
     console.error("Student deletion backend error:", error);
     return res.status(500).json({
       success: false,
-      message: "Internal Server Error: Database operation fail ho gayi.",
+      message: "Internal server error: the database operation failed.",
     });
   }
 });

@@ -36,11 +36,11 @@ export default function AdvancedMarkEntry() {
   const addSubject = () => {
     const clean = customSubject.trim();
     if (!clean) return;
-    if (!/^[\p{L}\p{N} .&()/-]+$/u.test(clean)) return setStatus({ type: "error", text: "Subject name valid nahi hai." });
+    if (!/^[\p{L}\p{N} .&()/-]+$/u.test(clean)) return setStatus({ type: "error", text: "The subject name is invalid." });
     setSavedSubjects((current) => [...new Set([...current, clean])]); setFilters((current) => ({ ...current, subjectName: clean })); setCustomSubject(""); setShowAdder(false); setStudents([]);
   };
   const loadStudents = async () => {
-    if (!filters.class || !filters.examType || !filters.subjectName || (["11th","12th"].includes(filters.class) && !filters.stream)) return setStatus({ type: "error", text: "Saare required filters select karein." });
+    if (!filters.class || !filters.examType || !filters.subjectName || (["11th","12th"].includes(filters.class) && !filters.stream)) return setStatus({ type: "error", text: "Select all required filters." });
     setLoading(true); setStatus(null); setSearch("");
     try {
       const headers = { Authorization: `Bearer ${localStorage.getItem("token")}` };
@@ -50,8 +50,8 @@ export default function AdvancedMarkEntry() {
       ]);
       const saved = new Map((marksResponse.data.savedStudentsMarks || []).map((item) => [item.studentId.toString(), item]));
       const list = (studentResponse.data.students || []).map((student) => { const mark = saved.get(student._id.toString()); return { studentId: student._id, admissionNo: student.admissionNo, rollNo: student.rollNo, name: student.name, theoryMarks: mark?.theoryMarks ?? "", practicalMarks: includePractical ? mark?.practicalMarks ?? "" : 0 }; });
-      setStudents(list); if (!list.length) setStatus({ type: "error", text: "Is selection mein koi student nahi mila." });
-    } catch (error) { setStatus({ type: "error", text: error.response?.data?.message || "Register load nahi hua." }); }
+      setStudents(list); if (!list.length) setStatus({ type: "error", text: "No students were found for this selection." });
+    } catch (error) { setStatus({ type: "error", text: error.response?.data?.message || "Could not load the register." }); }
     finally { setLoading(false); }
   };
   const update = (id, field, raw) => { 
@@ -63,7 +63,7 @@ export default function AdvancedMarkEntry() {
   const completed = students.filter((item) => item.theoryMarks !== "" && (!includePractical || item.practicalMarks !== "")).length;
   const visible = useMemo(() => students.filter((item) => item.name.toLowerCase().includes(search.toLowerCase()) || String(item.rollNo || "").includes(search)), [students, search]);
   const save = async () => {
-    if (completed !== students.length) return setStatus({ type: "error", text: `${students.length - completed} students ke marks incomplete hain.` });
+    if (completed !== students.length) return setStatus({ type: "error", text: `Marks are incomplete for ${students.length - completed} students.` });
     setSaving(true); setStatus(null);
     try { 
       const config = examMaxMarks[filters.examType] || examMaxMarks["Unit Test 1"];
@@ -76,15 +76,15 @@ export default function AdvancedMarkEntry() {
       }, { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }); 
       setStatus({ type: "success", text: response.data.message }); 
     }
-    catch (error) { setStatus({ type: "error", text: error.response?.data?.message || "Marks save nahi hue." }); }
+    catch (error) { setStatus({ type: "error", text: error.response?.data?.message || "Could not save marks." }); }
     finally { setSaving(false); }
   };
 
-  return <main className="me-page"><header className="me-header"><div className="me-icon"><FiBookOpen /></div><div><span>EXAM CONTROL</span><h2>Marks Entry</h2><p>Subject aur marking pattern select karke register update karein.</p></div><div className="me-session"><span>Working session</span><strong>{activeSession}</strong></div></header>
+  return <main className="me-page"><header className="me-header"><div className="me-icon"><FiBookOpen /></div><div><span>EXAM CONTROL</span><h2>Marks Entry</h2><p>Select a subject and marking pattern to update the register.</p></div><div className="me-session"><span>Working session</span><strong>{activeSession}</strong></div></header>
     {status && <div className={`me-alert ${status.type}`}>{status.type === "success" ? <FiCheckCircle /> : <FiAlertCircle />}{status.text}</div>}
     <section className="me-toolbar"><label><span>Class</span><select name="class" value={filters.class} onChange={changeFilter}><option value="">Select class</option>{SCHOOL_CLASSES.map((item) => <option key={item}>{item}</option>)}</select></label><label><span>Stream</span><select name="stream" value={filters.stream} onChange={changeFilter} disabled={!['11th','12th'].includes(filters.class)}><option value="">Select stream</option>{STREAMS.map((item) => <option key={item}>{item}</option>)}</select></label><label><span>Exam</span><select name="examType" value={filters.examType} onChange={changeFilter}><option value="">Select exam</option>{EXAMS.map((item) => <option key={item}>{item}</option>)}</select></label><label><span>Subject</span><select name="subjectName" value={filters.subjectName} onChange={changeFilter}><option value="">Select subject</option>{subjects.map((item) => <option key={item}>{item}</option>)}</select></label><button type="button" onClick={loadStudents} disabled={loading}><FiUsers />{loading ? "Loading..." : "Load register"}</button></section>
     {filters.examType && <section className="ame-max-marks"><strong>Max marks for {filters.examType}:</strong><div><label>Theory <input type="number" value={examMaxMarks[filters.examType]?.theory || 0} onChange={(e) => updateExamMaxMarks(filters.examType, "theory", e.target.value)} min="0" max="200" /></label>{filters.examType === "Annual" && <label>Practical <input type="number" value={examMaxMarks[filters.examType]?.practical || 0} onChange={(e) => updateExamMaxMarks(filters.examType, "practical", e.target.value)} min="0" max="100" /></label>}</div></section>}
-    <section className="ame-options"><button type="button" onClick={() => setShowAdder((value) => !value)}><FiPlus /> Add subject</button>{filters.examType === "Annual" && <label><input type="checkbox" checked={includePractical} onChange={(event) => { setIncludePractical(event.target.checked); setStudents([]); }} /> Include practical</label>}<span>{filters.examType && filters.examType !== "Annual" ? "Practical sirf Annual exam mein available hai." : includePractical ? `Theory /${examMaxMarks[filters.examType]?.theory || 75} + Practical /${examMaxMarks[filters.examType]?.practical || 30}` : `Theory /${examMaxMarks[filters.examType]?.theory || 75}`}</span>{showAdder && <div><input value={customSubject} onChange={(event) => setCustomSubject(event.target.value)} placeholder="New subject name" maxLength="60" /><button type="button" onClick={addSubject}>Add</button></div>}</section>
+    <section className="ame-options"><button type="button" onClick={() => setShowAdder((value) => !value)}><FiPlus /> Add subject</button>{filters.examType === "Annual" && <label><input type="checkbox" checked={includePractical} onChange={(event) => { setIncludePractical(event.target.checked); setStudents([]); }} /> Include practical</label>}<span>{filters.examType && filters.examType !== "Annual" ? "Practical marks are only available for the Annual exam." : includePractical ? `Theory /${examMaxMarks[filters.examType]?.theory || 75} + Practical /${examMaxMarks[filters.examType]?.practical || 30}` : `Theory /${examMaxMarks[filters.examType]?.theory || 75}`}</span>{showAdder && <div><input value={customSubject} onChange={(event) => setCustomSubject(event.target.value)} placeholder="New subject name" maxLength="60" /><button type="button" onClick={addSubject}>Add</button></div>}</section>
     <section className="me-register"><div className="me-register-bar"><div><strong>{filters.subjectName || "Student register"}</strong><span>{students.length} students · {completed} completed</span></div><label><FiSearch /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Find student" /></label></div><div className="me-table-wrap">{students.length ? <table><thead><tr><th>#</th><th>Roll</th><th>Admission</th><th>Student</th><th>Theory /{examMaxMarks[filters.examType]?.theory || 75}</th>{includePractical && <th>Practical /{examMaxMarks[filters.examType]?.practical || 30}</th>}<th>Total /{includePractical ? (examMaxMarks[filters.examType]?.theory || 75) + (examMaxMarks[filters.examType]?.practical || 30) : (examMaxMarks[filters.examType]?.theory || 75)}</th></tr></thead><tbody>{visible.map((item,index) => <tr key={item.studentId}><td>{index+1}</td><td>{item.rollNo || "—"}</td><td>{item.admissionNo || "—"}</td><td className="me-name">{item.name}</td><td><input type="number" min="0" max={examMaxMarks[filters.examType]?.theory || 75} value={item.theoryMarks} onChange={(event) => update(item.studentId,"theoryMarks",event.target.value)} /></td>{includePractical && <td><input type="number" min="0" max={examMaxMarks[filters.examType]?.practical || 30} value={item.practicalMarks} onChange={(event) => update(item.studentId,"practicalMarks",event.target.value)} /></td>}<td><strong className="me-total">{item.theoryMarks === "" ? "—" : Number(item.theoryMarks)+(includePractical?Number(item.practicalMarks||0):0)}</strong></td></tr>)}</tbody></table> : <div className="me-empty"><FiUsers /><strong>Select filters and load register</strong></div>}</div>{students.length>0&&<footer className="me-savebar"><div><span>Completion</span><div><i style={{width:`${completed/students.length*100}%`}} /></div><strong>{completed}/{students.length}</strong></div><button type="button" onClick={save} disabled={saving||completed!==students.length}><FiSave />{saving?"Saving...":"Save marks"}</button></footer>}</section>
   </main>;
 }

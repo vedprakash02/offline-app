@@ -22,10 +22,10 @@ export default function AdmitCardSelection({ onSelectStudent }) {
 
   const loadStudents = async () => {
     if (!filters.class) {
-      return setStatus({ type: "error", text: "Pehle class select karein." });
+      return setStatus({ type: "error", text: "Select a class first." });
     }
     if (needsStream && !filters.stream) {
-      return setStatus({ type: "error", text: "11th/12th ke liye stream select karein." });
+      return setStatus({ type: "error", text: "Select a stream for Classes 11 and 12." });
     }
     setLoading(true);
     setStatus(null);
@@ -37,10 +37,10 @@ export default function AdmitCardSelection({ onSelectStudent }) {
       });
       setStudents(response.data.students || []);
       if (!response.data.students?.length) {
-        setStatus({ type: "error", text: "Is class mein koi student nahi mila." });
+        setStatus({ type: "error", text: "No students were found in this class." });
       }
     } catch (error) {
-      setStatus({ type: "error", text: error.response?.data?.message || "Students load nahi hue." });
+      setStatus({ type: "error", text: error.response?.data?.message || "Could not load students." });
     } finally {
       setLoading(false);
     }
@@ -53,7 +53,7 @@ export default function AdmitCardSelection({ onSelectStudent }) {
         <div>
           <span>EXAM ADMIT CARD - SELECTION</span>
           <h2>Select Class & Students</h2>
-          <p>Class select karke students dekhein</p>
+          <p>Select a class to view students</p>
         </div>
         <div className="admit-card-selection-session">
           <span>Academic Session</span>
@@ -101,7 +101,7 @@ export default function AdmitCardSelection({ onSelectStudent }) {
         {students.length === 0 ? (
           <div className="admit-card-selection-empty">
             <FiUsers />
-            <strong>Class, exam select karke students load karein</strong>
+            <strong>Select a class and exam to load students</strong>
           </div>
         ) : (
           <div className="students-table">

@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const paymentSchema = new mongoose.Schema(
   {
-    amount: { type: Number, required: true, min: [0, "Amount 0 se kam nahi ho sakta"] },
+    amount: { type: Number, required: true, min: [0, "Amount cannot be less than 0"] },
     date: { type: Date, default: Date.now },
     mode: {
       type: String,
@@ -27,9 +27,9 @@ const feeSchema = new mongoose.Schema(
     frequency: { type: String, enum: ["Monthly", "One-time"], default: "One-time" },
     feeType: { type: String, required: true, trim: true },
     month: { type: String, default: "" },
-    totalAmount: { type: Number, required: true, min: [0, "Total amount negative nahi ho sakta"] },
-    discount: { type: Number, default: 0, min: [0, "Discount negative nahi ho sakta"] },
-    fine: { type: Number, default: 0, min: [0, "Fine negative nahi ho sakta"] },
+    totalAmount: { type: Number, required: true, min: [0, "Total amount cannot be negative"] },
+    discount: { type: Number, default: 0, min: [0, "Discount cannot be negative"] },
+    fine: { type: Number, default: 0, min: [0, "Fine cannot be negative"] },
     dueDate: { type: Date },
     payments: [paymentSchema],
     status: {

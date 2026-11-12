@@ -10,7 +10,7 @@ router.get("/students-filter", auth, async (req, res) => {
     const { session, class: studentClass } = req.query;
 
     if (!session || !studentClass) {
-      return res.status(400).json({ message: "Session aur Class query required hain." });
+      return res.status(400).json({ message: "Session and class query parameters are required." });
     }
 
     // Database me filter laga kar data dhundna
@@ -34,14 +34,14 @@ router.put("/generate-roll-no", auth, async (req, res) => {
     const { className, academicSession } = req.body; 
 
     if (!validClasses.has(className) || !isValidAcademicSession(academicSession)) {
-      return res.status(400).json({ message: "Kripya Class select karein." });
+      return res.status(400).json({ message: "Select a class." });
     }
 
     // 1. Us Class ke sabhi bachho ko database se fetch karein
     const students = await Student.find({ class: className, academicSession }); 
 
     if (students.length === 0) {
-      return res.status(404).json({ message: `Class ${className} me koi student nahi mila.` });
+      return res.status(404).json({ message: `No students were found in Class ${className}.` });
     }
 
     // 🌟 CUSTOM SORTING LOGIC: Stream ke mutabik aur fir Alphabetical sorting
@@ -107,7 +107,7 @@ router.put("/generate-roll-no", auth, async (req, res) => {
     })), { ordered: true });
 
     return res.status(200).json({ 
-      message: `Class ${className} ke sabhi ${students.length} bachho ka Roll Number Stream-wise (Arts → Science) aur Alphabetical order me successfully generate ho gaya hai!` 
+      message: `Roll numbers generated successfully for all ${students.length} students in Class ${className}, ordered by stream (Arts → Science) and alphabetically.` 
     });
 
   } catch (error) {

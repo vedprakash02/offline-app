@@ -11,7 +11,7 @@ const today = () => new Date().toLocaleDateString("en-CA");
 export default function ServerAttendancePage({ onBack }) {
   const [records, setRecords] = useState([]);
   const [absent, setAbsent] = useState([]);
-  const [message, setMessage] = useState("Camera ya hardware scanner se ID card scan karein.");
+  const [message, setMessage] = useState("Scan an ID card using the camera or a hardware scanner.");
   const [scanning, setScanning] = useState(false);
   const [online, setOnline] = useState(false);
   const [code, setCode] = useState("");
@@ -35,8 +35,8 @@ export default function ServerAttendancePage({ onBack }) {
     try {
       const result = await syncQrAttendanceToMongo();
       const message = result.failed
-        ? `${result.synced || 0} synced, ${result.failed} records match nahi hui.`
-        : `${result.synced || 0} QR attendance MongoDB mein synced.`;
+        ? `${result.synced || 0} synced; ${result.failed} records did not match.`
+        : `${result.synced || 0} QR attendance records synced to MongoDB.`;
       setErpSync({ pending: result.pending || result.failed || 0, syncing: false, message: showMessage || result.failed ? message : "" });
     } catch (error) {
       setErpSync((current) => ({ ...current, syncing: false, message: showMessage ? error.message : current.message }));
@@ -54,7 +54,7 @@ export default function ServerAttendancePage({ onBack }) {
       syncWithErp(false);
     } catch (error) {
       setOnline(false);
-      if (showError) setMessage(`${error.message} Backend server check karein.`);
+      if (showError) setMessage(`${error.message} Check the backend server.`);
     }
   }, [syncWithErp]);
 
@@ -70,7 +70,7 @@ export default function ServerAttendancePage({ onBack }) {
     if (token) fetch("http://localhost:3000/teachers-qr-roster", { headers: { Authorization: `Bearer ${token}` } })
       .then((response) => response.ok ? response.json() : Promise.reject())
       .then((data) => attendanceApi.syncTeachers(data.teachers || []))
-      .catch(() => setMessage("Teacher QR roster sync nahi hua; student scanning available hai."));
+      .catch(() => setMessage("Could not sync the teacher QR roster; student scanning is available."));
   }, []);
   useEffect(() => () => { if (scanner.current?.isScanning) scanner.current.stop().catch(() => {}); }, []);
 
@@ -90,7 +90,7 @@ export default function ServerAttendancePage({ onBack }) {
   }, [operator, syncWithErp]);
 
   const startCamera = async () => {
-    if (!navigator.mediaDevices?.getUserMedia) return setMessage("Live camera ke liye HTTPS chahiye; QR photo ya hardware scanner use karein.");
+    if (!navigator.mediaDevices?.getUserMedia) return setMessage("Live camera scanning requires HTTPS; use a QR photo or hardware scanner.");
     try {
       scanner.current = new Html5Qrcode("attendance-qr-reader");
       await scanner.current.start(
@@ -105,9 +105,9 @@ export default function ServerAttendancePage({ onBack }) {
         }, () => {},
       );
       setScanning(true);
-      setMessage("Camera ready ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ID card ka QR saamne rakhein.");
+      setMessage("Camera ready — place the ID card QR code in front of the camera.");
     } catch (error) {
-      setMessage(error?.name === "NotAllowedError" ? "Camera permission allow karein." : "Camera start nahi hua. HTTPS check karein.");
+      setMessage(error?.name === "NotAllowedError" ? "Allow camera permission." : "Could not start the camera. Check HTTPS.");
       scanner.current = null;
     }
   };
@@ -116,7 +116,7 @@ export default function ServerAttendancePage({ onBack }) {
     try { if (scanner.current?.isScanning) await scanner.current.stop(); scanner.current?.clear(); } catch { /* already stopped */ }
     scanner.current = null;
     setScanning(false);
-    setMessage("Camera band hai. Hardware scanner use kar sakte hain.");
+    setMessage("The camera is off. You can use a hardware scanner.");
   };
 
   const scanPhoto = async (event) => {
@@ -128,7 +128,7 @@ export default function ServerAttendancePage({ onBack }) {
       const value = await reader.scanFile(file, false);
       reader.clear();
       await mark(value, "photo");
-    } catch { setMessage("Photo mein QR nahi mila. Paas se seedhi photo lein."); }
+    } catch { setMessage("No QR code was found in the photo. Take a closer, straight photo."); }
   };
 
   const hardwareScan = async (event) => {
@@ -155,11 +155,11 @@ export default function ServerAttendancePage({ onBack }) {
       <div><h2>Digital QR Attendance</h2><p>{records.length} present &middot; {absent.length} absent &middot; {records.length + absent.length} total &middot; <span className={online ? "server-ok" : "server-off"}>{online ? "SQLite online" : "SQLite offline"}</span> &middot; <span className={erpSync.pending ? "erp-sync-pending" : "erp-sync-ok"}>{erpSync.syncing ? "Mongo syncing..." : erpSync.pending ? `${erpSync.pending} Mongo sync pending` : "Mongo synced"}</span></p>{erpSync.message && <small className="erp-sync-message">{erpSync.message}</small>}</div>
       <div className="attendance-actions"><button type="button" onClick={() => syncWithErp(true)} disabled={erpSync.syncing}>{erpSync.syncing ? "Syncing..." : "Sync to ERP"}</button><button type="button" onClick={onBack}>Back</button><button type="button" onClick={exportExcel} disabled={!records.length && !absent.length}>Export Excel</button></div>
     </header>
-    <div className="operator-row"><label>Teacher/operator <input value={operator} onChange={(e) => setOperator(e.target.value)} placeholder="Teacher ka naam" /></label></div>
+    <div className="operator-row"><label>Teacher/operator <input value={operator} onChange={(e) => setOperator(e.target.value)} placeholder="Teacher name" /></label></div>
     <section className="mobile-connect">
       <div>
         <strong>Mobile scanner</strong>
-        {scannerUrls.length ? <><p>Mobile ko isi Wi-Fi se jodkar QR scan karein.</p><a href={scannerUrls[0]} target="_blank" rel="noreferrer">{scannerUrls[0]}</a></> : <p>Network address nahi mila. Wi-Fi connection aur backend check karein.</p>}
+        {scannerUrls.length ? <><p>Connect the phone to the same Wi-Fi network and scan the QR code.</p><a href={scannerUrls[0]} target="_blank" rel="noreferrer">{scannerUrls[0]}</a></> : <p>Network address not found. Check the Wi-Fi connection and backend.</p>}
       </div>
       {scannerUrls[0] && <QRCodeSVG value={scannerUrls[0]} size={86} level="M" marginSize={1} />}
     </section>
@@ -171,7 +171,7 @@ export default function ServerAttendancePage({ onBack }) {
           {!scanning ? <button type="button" onClick={startCamera}>Start mobile camera</button> : <button type="button" onClick={stopCamera}>Stop camera</button>}
           <input ref={photoInput} className="qr-photo-input" type="file" accept="image/*" capture="environment" onChange={scanPhoto} />
           <button type="button" onClick={() => photoInput.current?.click()}>Scan QR photo</button>
-          <form onSubmit={hardwareScan}><input ref={hardwareInput} autoFocus value={code} onChange={(e) => setCode(e.target.value)} placeholder="USB/Bluetooth scanner yahan scan kare" autoComplete="off" /><button type="submit" disabled={!code.trim()}>Mark</button></form>
+          <form onSubmit={hardwareScan}><input ref={hardwareInput} autoFocus value={code} onChange={(e) => setCode(e.target.value)} placeholder="Scan here with a USB/Bluetooth scanner" autoComplete="off" /><button type="submit" disabled={!code.trim()}>Mark</button></form>
           
         </div>
       </section>
@@ -181,14 +181,14 @@ export default function ServerAttendancePage({ onBack }) {
           <button type="button" className={listView === "absent" ? "active absent" : ""} onClick={() => setListView("absent")}>Absent <b>{absent.length}</b></button>
           <span>Total: <b>{records.length + absent.length}</b></span>
         </div>
-        {listView === "present" && (!records.length ? <p className="empty-attendance">Abhi koi attendance nahi lagi.</p> : <div className="attendance-table-wrap"><table><thead><tr><th>Time</th><th>Name</th><th>Father</th><th>Class</th><th>Method</th><th>Status</th></tr></thead><tbody>{records.map((r) => <tr key={r.id}><td>{r.time}</td><td><b>{r.name}</b></td><td>{r.fatherName || "-"}</td><td>{r.className || "-"}</td><td>{r.source}</td><td><span>Present</span></td></tr>)}</tbody></table></div>)}
-        {listView === "absent" && (!absent.length ? <p className="empty-attendance">Koi absent student nahi hai.</p> : <div className="attendance-table-wrap"><table><thead><tr><th>Name</th><th>Father</th><th>Class</th><th>Status</th></tr></thead><tbody>{absent.map((r) => <tr key={r.studentId}><td><b>{r.name}</b></td><td>{r.fatherName || "-"}</td><td>{r.className || "-"}</td><td><span className="absent-status">Absent</span></td></tr>)}</tbody></table></div>)}
+        {listView === "present" && (!records.length ? <p className="empty-attendance">No attendance has been marked yet.</p> : <div className="attendance-table-wrap"><table><thead><tr><th>Time</th><th>Name</th><th>Father</th><th>Class</th><th>Method</th><th>Status</th></tr></thead><tbody>{records.map((r) => <tr key={r.id}><td>{r.time}</td><td><b>{r.name}</b></td><td>{r.fatherName || "-"}</td><td>{r.className || "-"}</td><td>{r.source}</td><td><span>Present</span></td></tr>)}</tbody></table></div>)}
+        {listView === "absent" && (!absent.length ? <p className="empty-attendance">No students are absent.</p> : <div className="attendance-table-wrap"><table><thead><tr><th>Name</th><th>Father</th><th>Class</th><th>Status</th></tr></thead><tbody>{absent.map((r) => <tr key={r.studentId}><td><b>{r.name}</b></td><td>{r.fatherName || "-"}</td><td>{r.className || "-"}</td><td><span className="absent-status">Absent</span></td></tr>)}</tbody></table></div>)}
       </section>
       <section className="attendance-list legacy-list"><h3>Today's central attendance</h3>
-        {!records.length ? <p className="empty-attendance">Abhi koi attendance nahi lagi.</p> : <div className="attendance-table-wrap"><table><thead><tr><th>Time</th><th>ID</th><th>Name</th><th>Class</th><th>Method</th><th>Status</th></tr></thead><tbody>{records.map((r) => <tr key={r.id}><td>{r.time}</td><td>{r.studentId}</td><td>{r.name}</td><td>{r.className || "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â"}</td><td>{r.source}</td><td><span>{r.status}</span></td></tr>)}</tbody></table></div>}
+        {!records.length ? <p className="empty-attendance">No attendance has been marked yet.</p> : <div className="attendance-table-wrap"><table><thead><tr><th>Time</th><th>ID</th><th>Name</th><th>Class</th><th>Method</th><th>Status</th></tr></thead><tbody>{records.map((r) => <tr key={r.id}><td>{r.time}</td><td>{r.studentId}</td><td>{r.name}</td><td>{r.className || "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â"}</td><td>{r.source}</td><td><span>{r.status}</span></td></tr>)}</tbody></table></div>}
       </section>
       <section className="attendance-list legacy-list"><h3>Absent students ({absent.length})</h3>
-        {!absent.length ? <p className="empty-attendance">Koi absent student nahi hai.</p> : <div className="attendance-table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Class</th><th>Status</th></tr></thead><tbody>{absent.map((r) => <tr key={r.studentId}><td>{r.studentId}</td><td>{r.name}</td><td>{r.className || "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â"}</td><td><span>Absent</span></td></tr>)}</tbody></table></div>}
+        {!absent.length ? <p className="empty-attendance">No students are absent.</p> : <div className="attendance-table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Class</th><th>Status</th></tr></thead><tbody>{absent.map((r) => <tr key={r.studentId}><td>{r.studentId}</td><td>{r.name}</td><td>{r.className || "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â"}</td><td><span>Absent</span></td></tr>)}</tbody></table></div>}
       </section>
     </div>
   </main>;

@@ -13,13 +13,13 @@ router.post("/promote-students", auth, async (req, res) => {
   try {
     const userRole = req.user.role; 
     if (userRole !== "teacher" && userRole !== "admin") {
-      return res.status(403).json({ message: "Aapko bacho ko promote karne ki permission nahi hai." });
+      return res.status(403).json({ message: "You do not have permission to promote students." });
     }
 
     const { studentIds, nextSession, nextClass } = req.body;
 
     if (!studentIds || studentIds.length === 0 || !nextSession || !nextClass) {
-      return res.status(400).json({ message: "Sari fields aur students select karna zaroori hai." });
+      return res.status(400).json({ message: "All fields and a student selection are required." });
     }
 
     // 🚀 NEW LOGIC: Har student ke document ko loop karke history save karenge
@@ -57,7 +57,7 @@ router.post("/promote-students", auth, async (req, res) => {
 
     return res.status(200).json({ 
       success: true, 
-      message: `${studentIds.length} Students ka purana data history me lock karke unhe safely Session ${nextSession} aur Class ${nextClass} me promote kar diya gaya hai.` 
+      message: `Previous records for ${studentIds.length} students have been locked in history, and the students have been promoted to Session ${nextSession}, Class ${nextClass}.` 
     });
 
   } catch (err) {
@@ -69,52 +69,52 @@ router.post("/promote-students", auth, async (req, res) => {
 router.put("/promote-student/:id", auth, async (req, res) => {
   try {
     if (req.user.role !== "teacher" && req.user.role !== "admin") {
-      return res.status(403).json({ message: "Student promote karne ki permission nahi hai." });
+      return res.status(403).json({ message: "You do not have permission to promote students." });
     }
     const { id } = req.params;
     const { nextClass, nextStream, nextAcademicSession: targetSession, currentClass, currentAcademicSession, examType } = req.body;
 
     // 1. Basic Validation check karein
     if (!nextClass) {
-      return res.status(400).json({ message: "Agli class chunna zaroori hai." });
+      return res.status(400).json({ message: "Select the next class." });
     }
     if ((nextClass === "11th" || nextClass === "12th") && !nextStream) {
-      return res.status(400).json({ message: "Class 11th aur 12th ke liye stream chunna zaroori hai." });
+      return res.status(400).json({ message: "Select a stream for Classes 11 and 12." });
     }
     if (!isValidAcademicSession(targetSession) || !isValidAcademicSession(currentAcademicSession)) {
-      return res.status(400).json({ message: "Naya academic session chunna zaroori hai." });
+      return res.status(400).json({ message: "Select a new academic session." });
     }
 
     // 2. Student ko database me dhoondhein
     const existingStudent = await Student.findById(id);
     if (!existingStudent) {
-      return res.status(404).json({ message: "Student nahi mila database me." });
+      return res.status(404).json({ message: "Student not found in the database." });
     }
 
     if (existingStudent.class !== currentClass || existingStudent.academicSession !== currentAcademicSession) {
-      return res.status(409).json({ message: `Student ab ${existingStudent.class} (${existingStudent.academicSession}) me hai. List refresh karein.` });
+      return res.status(409).json({ message: `The student is now in ${existingStudent.class} (${existingStudent.academicSession}). Refresh the list.` });
     }
     if (allowedNextClass[currentClass] !== nextClass) {
-      return res.status(400).json({ message: `${currentClass} se direct ${nextClass} promotion allowed nahi hai.` });
+      return res.status(400).json({ message: `Direct promotion from ${currentClass} to ${nextClass} is not allowed.` });
     }
     if (nextAcademicSession(currentAcademicSession) !== targetSession) {
-      return res.status(400).json({ message: `Target session ${nextAcademicSession(currentAcademicSession)} hona chahiye.` });
+      return res.status(400).json({ message: `The target session must be ${nextAcademicSession(currentAcademicSession)}.` });
     }
 
     // Promotion result sirf frontend par trust nahi hoga; saved marks backend par bhi verify honge.
-    if (!examType) return res.status(400).json({ message: "Promotion ke liye exam type required hai." });
+    if (!examType) return res.status(400).json({ message: "An exam type is required for promotion." });
     const marksRecords = await Marks.find({ class: currentClass, academicYear: currentAcademicSession, examType }).lean();
-    if (!marksRecords.length) return res.status(400).json({ message: `${examType} ke marks available nahi hain.` });
+    if (!marksRecords.length) return res.status(400).json({ message: `Marks for ${examType} are unavailable.` });
     const hasFailedSubject = marksRecords.some((record) => {
       const score = record.students?.find((item) => item.studentId?.toString() === id);
       const total = Number(score?.theoryMarks || 0) + (record.practicalEnabled ? Number(score?.practicalMarks || 0) : 0);
       return !score || total < Number(record.passingMarks || 33);
     });
-    if (hasFailedSubject) return res.status(400).json({ message: "Student sabhi saved subjects me pass nahi hai; promotion blocked." });
+    if (hasFailedSubject) return res.status(400).json({ message: "The student has not passed all saved subjects; promotion is blocked." });
 
     // Double-check: Agar student ko usi class me firse promote kiya ja raha hai toh rokhein
     if (existingStudent.class === nextClass && existingStudent.academicSession === targetSession) {
-      return res.status(400).json({ message: "Student pehle se hi is class aur session me hai." });
+      return res.status(400).json({ message: "The student is already in this class and session." });
     }
 
     // 3. Database Update Loop (Purana data history me jayega aur naya data primary fields me)
@@ -143,7 +143,7 @@ router.put("/promote-student/:id", auth, async (req, res) => {
     );
 
     res.status(200).json({
-      message: `${updatedStudent.name} successfully ${nextClass} me promote ho gaya hai.`,
+      message: `${updatedStudent.name} has been promoted to ${nextClass} successfully.`,
       data: updatedStudent,
     });
 

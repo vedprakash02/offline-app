@@ -12,7 +12,7 @@ router.get("/fetch-students/:className", auth, async (req, res) => {
 
     const { className } = req.params;
     const { stream, academicYear } = req.query;
-    if (!isValidAcademicSession(academicYear)) return res.status(400).json({ success: false, message: "Valid academicYear query required hai." });
+    if (!isValidAcademicSession(academicYear)) return res.status(400).json({ success: false, message: "A valid academicYear query is required." });
 
     // 1. Base Class Query Filter Setup (Case-Insensitive for safety)
     let queryFilter = sessionStudentQuery(academicYear);
@@ -43,10 +43,10 @@ router.get("/fetch-students/:className", auth, async (req, res) => {
 router.get("/exam-subjects", auth, async (req, res) => {
   try {
     const { class: className, academicYear, stream = "" } = req.query;
-    if (!SCHOOL_CLASSES.includes(className) || !isValidAcademicSession(academicYear)) return res.status(400).json({ success: false, message: "Valid class aur session required hai." });
+    if (!SCHOOL_CLASSES.includes(className) || !isValidAcademicSession(academicYear)) return res.status(400).json({ success: false, message: "A valid class and session are required." });
     const savedSubjects = await Marks.distinct("subjectName", { class: className, academicYear });
     return res.status(200).json({ success: true, subjects: [...new Set([...getSubjects(className, stream), ...savedSubjects])].sort((a, b) => a.localeCompare(b)) });
-  } catch (error) { return res.status(500).json({ success: false, message: "Subjects load nahi ho paye." }); }
+  } catch (error) { return res.status(500).json({ success: false, message: "Could not load subjects." }); }
 });
 
 const generateCleanMatrix = (studentsList, marksRecords) => {
@@ -106,7 +106,7 @@ router.get("/view-marks-matrix", auth, async (req, res) => {
     const { class: className, academicYear, examType, stream, subjectName } = req.query;
 
     if (!SCHOOL_CLASSES.includes(className) || !isValidAcademicSession(academicYear) || !EXAMS.includes(examType)) {
-      return res.status(400).json({ success: false, message: "Class, Session aur Exam Type zaroori hain." });
+      return res.status(400).json({ success: false, message: "A class, session and exam type are required." });
     }
 
     // 🚀 1. NEW ADVANCED STUDENT QUERY SETUP
@@ -220,7 +220,7 @@ router.post("/save-bulk-marks", auth, async (req, res) => {
       return res.status(403).json({
         success: false,
         message:
-          "Permission Denied: Sirf Teachers hi marks enter/update kar sakte hain.",
+          "Permission denied: only teachers can enter or update marks.",
       });
     }
 
@@ -249,20 +249,20 @@ router.post("/save-bulk-marks", auth, async (req, res) => {
     ) {
       return res
         .status(400)
-        .json({ success: false, message: "Sari fields mandatory hain." });
+        .json({ success: false, message: "All fields are required." });
     }
 
     if (!validExams.includes(examType) || typeof subjectName !== "string" || !subjectName.trim() || students.length > 5000) {
-      return res.status(400).json({ success: false, message: "Exam, subject ya students data invalid hai." });
+      return res.status(400).json({ success: false, message: "The exam, subject or student data is invalid." });
     }
     if (subjectName.trim().length > 60 || !/^[\p{L}\p{N} .&()/-]+$/u.test(subjectName.trim())) {
-      return res.status(400).json({ success: false, message: "Subject name valid nahi hai." });
+      return res.status(400).json({ success: false, message: "The subject name is invalid." });
     }
 
     const validTheoryMax = Number(theoryMaxMarks) > 0 && Number(theoryMaxMarks) <= 200;
     const validPracticalMax = Number(practicalMaxMarks) >= 0 && Number(practicalMaxMarks) <= 100;
     if (!validTheoryMax || !validPracticalMax) {
-      return res.status(400).json({ success: false, message: "Max marks range invalid hai (Theory: 1-200, Practical: 0-100)." });
+      return res.status(400).json({ success: false, message: "Invalid maximum marks range (Theory: 1–200, Practical: 0–100)." });
     }
 
     const invalidMarks = students.some((student) =>
@@ -270,26 +270,26 @@ router.post("/save-bulk-marks", auth, async (req, res) => {
       !Number.isFinite(Number(student.theoryMarks)) || Number(student.theoryMarks) < 0 || Number(student.theoryMarks) > Number(theoryMaxMarks) ||
       !Number.isFinite(Number(student.practicalMarks)) || Number(student.practicalMarks) < 0 || Number(student.practicalMarks) > Number(practicalMaxMarks)
     );
-    if (invalidMarks) return res.status(400).json({ success: false, message: `Theory marks 0-${theoryMaxMarks} aur practical marks 0-${practicalMaxMarks} ke beech hone chahiye.` });
+    if (invalidMarks) return res.status(400).json({ success: false, message: `Theory marks must be between 0 and ${theoryMaxMarks}, and practical marks between 0 and ${practicalMaxMarks}.` });
     if (examType !== "Annual" && students.some((student) => Number(student.practicalMarks) !== 0)) {
-      return res.status(400).json({ success: false, message: "Practical marks sirf Annual exam me save kiye ja sakte hain." });
+      return res.status(400).json({ success: false, message: "Practical marks can only be saved for the Annual exam." });
     }
-    if (examType !== "Annual" && practicalEnabled) return res.status(400).json({ success: false, message: "Practical option sirf Annual exam me available hai." });
+    if (examType !== "Annual" && practicalEnabled) return res.status(400).json({ success: false, message: "The practical option is only available for the Annual exam." });
 
     const submittedIds = students.map((student) => student.studentId.toString());
     if (new Set(submittedIds).size !== submittedIds.length) {
-      return res.status(400).json({ success: false, message: "Ek student ki duplicate marks row request me mili." });
+      return res.status(400).json({ success: false, message: "A duplicate marks row for a student was found in the request." });
     }
 
     const allowedStudents = (await Student.find(sessionStudentQuery(academicYear)).lean())
       .map((student) => studentForSession(student, academicYear))
       .filter((student) => student.class === className);
     const normalizedStream = String(stream || "").trim().toLowerCase();
-    if (["11th", "12th"].includes(className) && !normalizedStream) return res.status(400).json({ success: false, message: "11th/12th ke liye stream required hai." });
+    if (["11th", "12th"].includes(className) && !normalizedStream) return res.status(400).json({ success: false, message: "A stream is required for Classes 11 and 12." });
     const streamStudents = normalizedStream ? allowedStudents.filter((student) => String(student.stream || "").trim().toLowerCase() === normalizedStream) : allowedStudents;
     const allowedIds = new Set(streamStudents.map((student) => student._id.toString()));
     if (students.some((student) => !allowedIds.has(student.studentId.toString()))) {
-      return res.status(400).json({ success: false, message: "Request me selected session ke bahar ka student mila." });
+      return res.status(400).json({ success: false, message: "A student outside the selected session was found in the request." });
     }
 
     const masterRecord = await Marks.findOne({
@@ -321,7 +321,7 @@ router.post("/save-bulk-marks", auth, async (req, res) => {
       await newMarks.save();
       return res.status(200).json({
         success: true,
-        message: "Marks successfully save ho gaye!",
+        message: "Marks saved successfully.",
         data: newMarks,
       });
     }
@@ -356,7 +356,7 @@ router.post("/save-bulk-marks", auth, async (req, res) => {
     res.status(200).json({
       success: true,
       message:
-        "Marks successfully update ho gaye hain aur baki ka data safe hai!",
+        "Marks updated successfully. All other data has been preserved.",
       data: masterRecord,
     });
   } catch (error) {
@@ -380,7 +380,7 @@ router.delete("/delete-student-marks/:studentId", auth, async (req, res) => {
       return res.status(403).json({
         success: false,
         message:
-          "Permission Denied: Aap kisi student ke marks delete nahi kar sakte.",
+          "Permission denied: you cannot delete student marks.",
       });
     }
 
@@ -389,7 +389,7 @@ router.delete("/delete-student-marks/:studentId", auth, async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(studentId) || !className || !isValidAcademicSession(academicYear) || !examType) {
       return res.status(400).json({
         success: false,
-        message: "Class, Session aur Exam Type parameters zaroori hain.",
+        message: "Class, session and exam type parameters are required.",
       });
     }
 
@@ -412,7 +412,7 @@ router.delete("/delete-student-marks/:studentId", auth, async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Student ke marks row se successfully clear kar diye gaye hain!",
+      message: "Student marks cleared successfully from the row.",
       details: updateResult,
     });
   } catch (error) {

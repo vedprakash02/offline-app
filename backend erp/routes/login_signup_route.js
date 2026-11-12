@@ -17,21 +17,21 @@ router.post("/signup", async (req, res) => {
     if (!username || !email || !password || !role) {
       return res.status(400).json({
         success: false,
-        message: "Sabhi fields bharna compulsory hai!"
+        message: "All fields are required."
       });
     }
 
     const cleanEmail = email.trim().toLowerCase();
     const cleanUsername = username.trim();
     if (!cleanUsername || !/^\S+@\S+\.\S+$/.test(cleanEmail) || String(password).length < 8) {
-      return res.status(400).json({ success: false, message: "Valid username, email aur kam se kam 8 characters ka password required hai." });
+      return res.status(400).json({ success: false, message: "A valid username, email and password of at least 8 characters are required." });
     }
 
     // Fresh installation: the first account is securely bootstrapped as Admin.
     const isFirstAccount = (await User.countDocuments()) === 0;
     const requestedRole = isFirstAccount ? "admin" : String(role).trim().toLowerCase();
     if (!["admin", "teacher"].includes(requestedRole)) {
-      return res.status(400).json({ success: false, message: "Offline app me sirf Admin ya Teacher login allowed hai." });
+      return res.status(400).json({ success: false, message: "Only Admin and Teacher logins are allowed in the offline app." });
     }
     if (isFirstAccount) {
       await AllowedUser.findOneAndUpdate(
@@ -45,14 +45,14 @@ router.post("/signup", async (req, res) => {
     if (!allowedUser) {
       return res.status(403).json({
         success: false,
-        message: "Yeh email master users list me approved nahi hai.",
+        message: "This email is not approved in the master users list.",
       });
     }
 
     if (allowedUser.role !== requestedRole) {
       return res.status(400).json({
         success: false,
-        message: `Is email ke liye approved role ${allowedUser.role} hai.`,
+        message: `The approved role for this email is ${allowedUser.role}.`,
       });
     }
 
@@ -60,7 +60,7 @@ router.post("/signup", async (req, res) => {
     if (exitingUser) {
       return res.status(400).json({
         success: false,
-        message: "Aap is email se pehle hi account bana chuke hain! Kripya Login karein."
+        message: "An account already exists for this email. Please log in."
       });
     }
 
@@ -77,12 +77,12 @@ router.post("/signup", async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: isFirstAccount ? "Vidya Prabandh ka pehla Admin account ban gaya. Ab login karein." : "User created successfully! Aapka account ban gaya.",
+      message: isFirstAccount ? "The first Vidya Prabandh Admin account has been created. Log in to continue." : "Your account has been created successfully.",
     });
 
   } catch (err) {
     console.error("Signup Error: ", err);
-    if (err?.code === 11000) return res.status(409).json({ success: false, message: "Is email se account pehle hi bana hua hai." });
+    if (err?.code === 11000) return res.status(409).json({ success: false, message: "An account already exists for this email." });
     return res.status(500).json({ success: false, message: "Server Error: " + err.message });
   }
 });
@@ -93,22 +93,22 @@ router.post("/login", async (req, res) => {
     const { email, password } = req.body;
     
     if (!email || !password) {
-      return res.status(400).json({ success: false, message: "Email aur Password zaroori hain!" });
+      return res.status(400).json({ success: false, message: "Email and password are required." });
     }
 
     const cleanEmail = email.trim().toLowerCase();
     const user = await User.findOne({ email: cleanEmail });
 
     if (!user) {
-      return res.status(400).json({ success: false, message: "User nahi mila! Kripya sahi email dalein." });
+      return res.status(400).json({ success: false, message: "User not found. Enter the correct email." });
     }
     if (!user.active || !["admin", "teacher"].includes(user.role)) {
-      return res.status(403).json({ success: false, message: "Is account ka login access allowed nahi hai." });
+      return res.status(403).json({ success: false, message: "Login access is not allowed for this account." });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ success: false, message: "Galat password! Kripya fir se koshish karein." });
+      return res.status(400).json({ success: false, message: "Incorrect password. Please try again." });
     }
 
     const token = jwt.sign(

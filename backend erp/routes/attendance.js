@@ -9,7 +9,7 @@ router.get("/attendance-summary", auth, async (req, res) => {
   try {
     const { date, academicSession } = req.query;
     if (!date || !isValidAcademicSession(academicSession)) {
-      return res.status(400).json({ message: "Date aur valid academicSession bhejna zaroori hai." });
+      return res.status(400).json({ message: "A date and valid academicSession are required." });
     }
 
     const students = (await Student.find(sessionStudentQuery(academicSession)).lean())
@@ -37,7 +37,7 @@ router.get("/attendance-summary", auth, async (req, res) => {
     });
   } catch (error) {
     console.error("Attendance summary load error:", error);
-    return res.status(500).json({ message: "Attendance summary load nahi ho payi." });
+    return res.status(500).json({ message: "Could not load the attendance summary." });
   }
 });
 // 1. GET ATTENDANCE REPORT ROUTE (Ab Holiday poore school ke liye check hogi)
@@ -48,7 +48,7 @@ router.get("/attendance-report", auth, async (req, res) => {
     if (!studentClass || !month || !isValidAcademicSession(academicSession)) {
       return res
         .status(400)
-        .json({ message: "Class, Month aur valid Academic Session bhejna zaroori hai" });
+        .json({ message: "A class, month and valid academic session are required." });
     }
 
     // 1. Select ki gayi class ke saare bache dhoondhein
@@ -168,7 +168,7 @@ router.get("/attendance-report", auth, async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Report generate karne me galti:", error);
+    console.error("Could not generate the report:", error);
     return res.status(500).json({ error: error.message });
   }
 });
@@ -179,7 +179,7 @@ router.get("/attendance", auth, async (req, res) => {
     const { date, studentClass, academicSession } = req.query;
 
     if (!date || !studentClass || !isValidAcademicSession(academicSession)) {
-      return res.status(400).json({ message: "Date, class aur valid academicSession bhejna zaroori hai." });
+      return res.status(400).json({ message: "A date, class and valid academicSession are required." });
     }
 
     const attendanceRecords = await Attendance.find({
@@ -199,7 +199,7 @@ router.get("/attendance", auth, async (req, res) => {
     });
   } catch (error) {
     console.error("Daily attendance load error:", error);
-    return res.status(500).json({ message: "Attendance load nahi ho payi." });
+    return res.status(500).json({ message: "Could not load attendance." });
   }
 });
 
@@ -209,7 +209,7 @@ router.post("/student-attendance", auth, async (req, res) => {
     const userRole = req.user.role;
     if (userRole !== "teacher" && userRole !== "admin") {
       return res.status(403).json({
-        message: "Permission Denied: Aap naya admission nahi kar sakte.",
+        message: "Permission denied: you cannot create a new admission.",
       });
     }
     const { attendanceData, academicSession } = req.body;
@@ -220,15 +220,15 @@ router.post("/student-attendance", auth, async (req, res) => {
         .json({ success: false, message: "Invalid data format" });
     }
 
-    if (attendanceData.length > 500) return res.status(400).json({ success: false, message: "Ek request mein adhiktam 500 attendance records bhejein." });
+    if (attendanceData.length > 500) return res.status(400).json({ success: false, message: "Send a maximum of 500 attendance records per request." });
     const validStatuses = new Set(["Present", "Absent", "Late"]);
     const datePattern = /^\d{4}-\d{2}-\d{2}$/;
     if (attendanceData.some((record) => !mongoose.Types.ObjectId.isValid(record.studentId) || !datePattern.test(String(record.date || "")) || !validStatuses.has(record.status))) {
-      return res.status(400).json({ success: false, message: "Har attendance record mein valid student, date aur status required hai." });
+      return res.status(400).json({ success: false, message: "Each attendance record requires a valid student, date and status." });
     }
     const studentIds = [...new Set(attendanceData.map((record) => String(record.studentId)))];
     const roster = await Student.find(sessionStudentQuery(academicSession, { _id: { $in: studentIds } })).select("_id class academicSession academicHistory").lean();
-    if (roster.length !== studentIds.length) return res.status(400).json({ success: false, message: "Kuch students selected academic session mein nahi hain." });
+    if (roster.length !== studentIds.length) return res.status(400).json({ success: false, message: "Some students do not belong to the selected academic session." });
     const classByStudentId = new Map(roster.map((student) => [String(student._id), studentForSession(student, academicSession).class]));
 
     const bulkOps = attendanceData.map((record) => ({
@@ -265,10 +265,10 @@ router.post('/mark-holiday', auth, async (req, res) => {
 
   try {
     if (req.user.role !== "teacher" && req.user.role !== "admin") {
-      return res.status(403).json({ message: "Holiday update karne ki permission nahi hai." });
+      return res.status(403).json({ message: "You do not have permission to update holidays." });
     }
     if (!date || !isValidAcademicSession(academicSession)) {
-      return res.status(400).json({ message: "Date batana zaroori hai." });
+      return res.status(400).json({ message: "A date is required." });
     }
     
     if (isHoliday) {
@@ -286,12 +286,12 @@ router.post('/mark-holiday', auth, async (req, res) => {
     }
 
     return res.status(200).json({ 
-      message: "Holiday status poore school ke liye database me update ho gaya hai!" 
+      message: "Holiday status updated for the entire school." 
     });
 
   } catch (error) {
     console.error("Holiday API Error:", error);
-    return res.status(500).json({ message: "Server error: Holiday save nahi ho payi." });
+    return res.status(500).json({ message: "Server error: could not save the holiday." });
   }
 });
 
@@ -300,12 +300,12 @@ router.post('/mark-holiday', auth, async (req, res) => {
 router.post("/attendance/qr-sync", auth, async (req, res) => {
   try {
     if (!["teacher", "admin"].includes(req.user.role)) {
-      return res.status(403).json({ message: "QR attendance sync ki permission nahi hai." });
+      return res.status(403).json({ message: "You do not have permission to sync QR attendance." });
     }
     const events = Array.isArray(req.body.events) ? req.body.events : [];
     const fallbackSession = String(req.body.academicSession || "").trim();
     if (!events.length || events.length > 500) {
-      return res.status(400).json({ message: "1 se 500 QR events bhejein." });
+      return res.status(400).json({ message: "Send between 1 and 500 QR events." });
     }
 
     const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -313,7 +313,7 @@ router.post("/attendance/qr-sync", auth, async (req, res) => {
     for (const event of events) {
       if (event.entityType === "teacher") {
         const employeeId=String(event.employeeId||"").trim().toUpperCase(); const teacher=await Teacher.findOne({employeeId,status:"Active"}).lean();
-        if(!teacher){results.push({id:Number(event.id),entityType:"teacher",status:"not_found",message:`Teacher ${employeeId} active roster mein nahi mila.`});continue;}
+        if(!teacher){results.push({id:Number(event.id),entityType:"teacher",status:"not_found",message:`Teacher ${employeeId} was not found in the active roster.`});continue;}
         const existing=await TeacherAttendance.findOne({teacherId:teacher._id,date:event.date}); const scannedAt=new Date(event.scannedAt); if(existing?.source==="manual"&&existing.updatedAt>=scannedAt){results.push({id:Number(event.id),entityType:"teacher",status:"manual_override",message:"Newer manual attendance preserved."});continue;}
         const formatTime=(value)=>value?new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date(value)):""; const sourceMap={camera:"qr-camera",photo:"qr-photo",hardware:"qr-hardware","mobile-offline":"qr-mobile",manual:"qr-hardware"};
         await TeacherAttendance.findOneAndUpdate({teacherId:teacher._id,date:event.date},{$set:{status:"Present",checkIn:formatTime(event.checkInAt),checkOut:formatTime(event.checkOutAt),source:sourceMap[event.source]||"qr-hardware",note:"QR attendance",markedBy:req.user.id}},{upsert:true,new:true,runValidators:true});
@@ -324,7 +324,7 @@ router.post("/attendance/qr-sync", auth, async (req, res) => {
       const academicSession = String(event.academicSession || fallbackSession).trim();
       const date = String(event.date || "").trim();
       if (!Number.isInteger(id) || !admissionNo || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !isValidAcademicSession(academicSession)) {
-        results.push({ id, status: "error", message: "Invalid admission number, date ya session." });
+        results.push({ id, status: "error", message: "Invalid admission number, date or session." });
         continue;
       }
 
@@ -338,7 +338,7 @@ router.post("/attendance/qr-sync", auth, async (req, res) => {
         })).lean();
       }
       if (!student) {
-        results.push({ id, status: "not_found", message: `Admission No ${admissionNo} MongoDB roster mein nahi mila.` });
+        results.push({ id, status: "not_found", message: `Admission No ${admissionNo} was not found in the MongoDB roster.` });
         continue;
       }
 
@@ -347,7 +347,7 @@ router.post("/attendance/qr-sync", auth, async (req, res) => {
       const validScannedAt = !Number.isNaN(scannedAt.getTime());
       const existing = await Attendance.findOne({ academicSession, studentId: student._id, date });
       if (existing?.source === "manual" && (!validScannedAt || existing.markedAt >= scannedAt)) {
-        results.push({ id, status: "manual_override", message: "QR scan ke baad ki teacher correction rakhi gayi." });
+        results.push({ id, status: "manual_override", message: "The teacher correction made after the QR scan was retained." });
         continue;
       }
 
@@ -377,7 +377,7 @@ router.post("/attendance/qr-sync", auth, async (req, res) => {
     });
   } catch (error) {
     console.error("QR attendance Mongo sync error:", error);
-    return res.status(500).json({ message: "QR attendance MongoDB mein sync nahi hui." });
+    return res.status(500).json({ message: "Could not sync QR attendance to MongoDB." });
   }
 });
 module.exports = router;

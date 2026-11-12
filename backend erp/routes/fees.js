@@ -28,7 +28,7 @@ const serializeFee = (fee) => {
 router.get("/fees", auth, async (req, res) => {
   try {
     if (!canManageFees(req.user)) {
-      return res.status(403).json({ success: false, message: "Fee records dekhne ki permission nahi hai." });
+      return res.status(403).json({ success: false, message: "You do not have permission to view fee records." });
     }
 
     const { search, studentClass, academicSession, status, feeType } = req.query;
@@ -81,45 +81,45 @@ router.get("/fees", auth, async (req, res) => {
 router.post("/fees", auth, async (req, res) => {
   try {
     if (!canManageFees(req.user)) {
-      return res.status(403).json({ success: false, message: "Fee create karne ki permission nahi hai." });
+      return res.status(403).json({ success: false, message: "You do not have permission to create fees." });
     }
 
     const { studentId, academicSession, feeType, month, totalAmount, discount, fine, dueDate, initialPayment, paymentMode, note } = req.body;
 
     if (!/^\d{4}-\d{4}$/.test(academicSession || "")) {
-      return res.status(400).json({ success: false, message: "Valid academic session select karein." });
+      return res.status(400).json({ success: false, message: "Select a valid academic session." });
     }
     const amountValue = Number(totalAmount);
     const discountValue = Number(discount || 0);
     const fineValue = Number(fine || 0);
     const initialPaymentValue = Number(initialPayment || 0);
     if (![amountValue, discountValue, fineValue, initialPaymentValue].every(Number.isFinite) || amountValue <= 0 || discountValue < 0 || fineValue < 0 || initialPaymentValue < 0) {
-      return res.status(400).json({ success: false, message: "Fee amounts valid aur total amount 0 se zyada hona chahiye." });
+      return res.status(400).json({ success: false, message: "Fee amounts must be valid and the total amount must be greater than 0." });
     }
     if (feeType === "Monthly" && !month) {
-      return res.status(400).json({ success: false, message: "Monthly fee ke liye month select karein." });
+      return res.status(400).json({ success: false, message: "Select a month for the monthly fee." });
     }
     if (!studentId || !mongoose.Types.ObjectId.isValid(studentId)) {
-      return res.status(400).json({ success: false, message: "Valid student select karein." });
+      return res.status(400).json({ success: false, message: "Select a valid student." });
     }
 
     // UX Protection: Ã Â¤ÂÃ Â¤â€¢ Ã Â¤Â¹Ã Â¥â‚¬ Ã Â¤Â®Ã Â¤Â¹Ã Â¥â‚¬Ã Â¤Â¨Ã Â¥â€¡ Ã Â¤â€¢Ã Â¥â‚¬ Ã Â¤Â¦Ã Â¥â€¹Ã Â¤Â¬Ã Â¤Â¾Ã Â¤Â°Ã Â¤Â¾ Ã Â¤Â«Ã Â¥â‚¬Ã Â¤Â¸ Ã Â¤Å“Ã Â¤Â¨Ã Â¤Â°Ã Â¥â€¡Ã Â¤Â¶Ã Â¤Â¨ Ã Â¤Â°Ã Â¥â€¹Ã Â¤â€¢Ã Â¤Â¨Ã Â¤Â¾
     if (feeType === "Monthly" && month) {
       const duplicateCheck = await Fee.findOne({ studentId, academicSession, feeType, month });
       if (duplicateCheck) {
-        return res.status(400).json({ success: false, message: `Is student ki ${month} ki Monthly fee pehle hi create ho chuki hai.` });
+        return res.status(400).json({ success: false, message: `The monthly fee for ${month} has already been created for this student.` });
       }
     }
 
     const student = await Student.findById(studentId);
-    if (!student) return res.status(404).json({ success: false, message: "Student nahi mila." });
+    if (!student) return res.status(404).json({ success: false, message: "Student not found." });
 
     const payableAmount = Math.max(0, amountValue - discountValue + fineValue);
     const paymentAmount = initialPaymentValue;
 
     // UX Validation: Ã Â¤ÂÃ Â¤Â¡Ã Â¤ÂµÃ Â¤Â¾Ã Â¤â€šÃ Â¤Â¸ Ã Â¤Â¯Ã Â¤Â¾ Ã Â¤ÂÃ Â¤â€¢Ã Â¥ÂÃ Â¤Â¸Ã Â¥ÂÃ Â¤Å¸Ã Â¥ÂÃ Â¤Â°Ã Â¤Â¾ Ã Â¤ÂªÃ Â¥â€¡Ã Â¤Â®Ã Â¥â€¡Ã Â¤â€šÃ Â¤Å¸ Ã Â¤Â°Ã Â¥â€¹Ã Â¤â€¢Ã Â¤Â¨Ã Â¤Â¾
     if (paymentAmount > payableAmount) {
-      return res.status(400).json({ success: false, message: `First payment (Ã¢â€šÂ¹${paymentAmount}) total payable amount (Ã¢â€šÂ¹${payableAmount}) se zyada nahi ho sakti.` });
+      return res.status(400).json({ success: false, message: `The first payment (₹${paymentAmount}) cannot exceed the total payable amount (₹${payableAmount}).` });
     }
 
     const payments = paymentAmount > 0 ? [{
@@ -148,25 +148,25 @@ router.post("/fees", auth, async (req, res) => {
     await fee.save();
     await fee.populate("studentId", "name fatherName admissionNo class stream rollNo phone");
 
-    res.status(201).json({ success: true, message: "Fee demand successfully save ho gayi.", fee: serializeFee(fee) });
+    res.status(201).json({ success: true, message: "Fee demand saved successfully.", fee: serializeFee(fee) });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Fee save nahi ho payi: " + error.message });
+    res.status(500).json({ success: false, message: "Could not save the fee:" + error.message });
   }
 });
 
 router.post("/fees/:id/payment", auth, async (req, res) => {
   try {
     if (!canManageFees(req.user)) {
-      return res.status(403).json({ success: false, message: "Permission nahi hai." });
+      return res.status(403).json({ success: false, message: "Permission denied." });
     }
 
     const { amount, mode, note } = req.body;
     const paymentAmount = Number(amount);
     if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
-      return res.status(400).json({ success: false, message: "Payment amount 0 se zyada hona chahiye." });
+      return res.status(400).json({ success: false, message: "The payment amount must be greater than 0." });
     }
     const fee = await Fee.findById(req.params.id);
-    if (!fee) return res.status(404).json({ success: false, message: "Fee record nahi mila." });
+    if (!fee) return res.status(404).json({ success: false, message: "Fee record not found." });
 
     const currentFeeData = serializeFee(fee);
     
@@ -174,7 +174,7 @@ router.post("/fees/:id/payment", auth, async (req, res) => {
     if (paymentAmount > currentFeeData.balanceAmount) {
       return res.status(400).json({ 
         success: false, 
-        message: `Overpayment Error: Maximum due amount Ã¢â€šÂ¹${currentFeeData.balanceAmount} hai. Aap Ã¢â€šÂ¹${amount} collect nahi kar sakte.` 
+        message: `Overpayment error: the maximum amount due is ₹${currentFeeData.balanceAmount}. You cannot collect ₹${amount}.` 
       });
     }
 
@@ -189,7 +189,7 @@ router.post("/fees/:id/payment", auth, async (req, res) => {
     await fee.save();
     await fee.populate("studentId", "name fatherName admissionNo class stream rollNo phone");
 
-    res.status(200).json({ success: true, message: "Payment successfully collect ho gaya.", fee: serializeFee(fee) });
+    res.status(200).json({ success: true, message: "Payment collected successfully.", fee: serializeFee(fee) });
   } catch (error) {
     res.status(500).json({ success: false, message: "Payment fail: " + error.message });
   }
@@ -202,17 +202,17 @@ const streamLookup = (stream) => {
 const findFeeStructure = ({ academicSession, studentClass, stream }) => FeeStructure.findOne({ academicSession, class: studentClass, stream: streamLookup(stream) });
 router.post("/fees/student/:studentId/payment", auth, async (req, res) => {
   try {
-    if (!canManageFees(req.user)) return res.status(403).json({ success: false, message: "Permission nahi hai." });
+    if (!canManageFees(req.user)) return res.status(403).json({ success: false, message: "Permission denied." });
     const { academicSession, amount, mode = "Cash", note = "", startMonth } = req.body;
     const paymentAmount = Number(amount);
-    if (!mongoose.Types.ObjectId.isValid(req.params.studentId) || !isValidAcademicSession(academicSession)) return res.status(400).json({ success: false, message: "Valid student aur session required hain." });
-    if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) return res.status(400).json({ success: false, message: "Payment amount 0 se zyada hona chahiye." });
+    if (!mongoose.Types.ObjectId.isValid(req.params.studentId) || !isValidAcademicSession(academicSession)) return res.status(400).json({ success: false, message: "A valid student and session are required." });
+    if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) return res.status(400).json({ success: false, message: "The payment amount must be greater than 0." });
 
     const studentDocument = await Student.findById(req.params.studentId);
-    if (!studentDocument) return res.status(404).json({ success: false, message: "Student nahi mila." });
+    if (!studentDocument) return res.status(404).json({ success: false, message: "Student not found." });
     const student = studentForSession(studentDocument, academicSession);
     const structure = await findFeeStructure({ academicSession, studentClass: student.class, stream: student.stream });
-    if (!structure) return res.status(404).json({ success: false, message: "Is class ka fee setup pehle save karein." });
+    if (!structure) return res.status(404).json({ success: false, message: "Save the fee setup for this class first." });
 
     for (const item of structure.items) {
       const exists = await Fee.exists({ studentId: req.params.studentId, academicSession, feeStructureItemId: item._id });
@@ -223,7 +223,7 @@ router.post("/fees/student/:studentId/payment", auth, async (req, res) => {
 
     const bills = await Fee.find({ studentId: req.params.studentId, academicSession }).sort({ createdAt: 1 });
     const totalBalance = bills.reduce((sum, bill) => sum + serializeFee(bill).balanceAmount, 0);
-    if (paymentAmount > totalBalance) return res.status(400).json({ success: false, message: `Maximum pending balance ${totalBalance} hai.` });
+    if (paymentAmount > totalBalance) return res.status(400).json({ success: false, message: `The maximum pending balance is ${totalBalance}.` });
 
     const receiptNo = buildReceiptNo();
     const paidAt = new Date();
@@ -240,19 +240,19 @@ router.post("/fees/student/:studentId/payment", auth, async (req, res) => {
       remaining -= allocated;
     }
 
-    res.json({ success: true, message: "Payment successfully save ho gaya.", receipt: { receiptNo, date: paidAt, amount: paymentAmount, mode, note, allocations }, student });
+    res.json({ success: true, message: "Payment saved successfully.", receipt: { receiptNo, date: paidAt, amount: paymentAmount, mode, note, allocations }, student });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Payment save nahi hua: " + error.message });
+    res.status(500).json({ success: false, message: "Could not save the payment:" + error.message });
   }
 });
 router.delete("/fees/student/:studentId/payments/:receiptNo", auth, async (req, res) => {
   try {
-    if (!canManageFees(req.user)) return res.status(403).json({ success: false, message: "Permission nahi hai." });
+    if (!canManageFees(req.user)) return res.status(403).json({ success: false, message: "Permission denied." });
     const { academicSession } = req.query;
-    if (!mongoose.Types.ObjectId.isValid(req.params.studentId) || !isValidAcademicSession(academicSession)) return res.status(400).json({ success: false, message: "Valid student aur session required hain." });
+    if (!mongoose.Types.ObjectId.isValid(req.params.studentId) || !isValidAcademicSession(academicSession)) return res.status(400).json({ success: false, message: "A valid student and session are required." });
 
     const bills = await Fee.find({ studentId: req.params.studentId, academicSession, "payments.receiptNo": req.params.receiptNo });
-    if (!bills.length) return res.status(404).json({ success: false, message: "Payment receipt nahi mili." });
+    if (!bills.length) return res.status(404).json({ success: false, message: "Payment receipt not found." });
 
     let removedAmount = 0;
     for (const bill of bills) {
@@ -262,21 +262,21 @@ router.delete("/fees/student/:studentId/payments/:receiptNo", auth, async (req, 
       await bill.save();
     }
 
-    res.json({ success: true, message: `${req.params.receiptNo} ki ${removedAmount} payment delete ho gayi.`, removedAmount });
+    res.json({ success: true, message: `Payment of ${removedAmount} for ${req.params.receiptNo} deleted.`, removedAmount });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Payment delete nahi hui: " + error.message });
+    res.status(500).json({ success: false, message: "Could not delete the payment:" + error.message });
   }
 });
 router.delete("/fees/:id", auth, async (req, res) => {
   try {
     if (!canManageFees(req.user)) {
-      return res.status(403).json({ success: false, message: "Delete permission nahi hai." });
+      return res.status(403).json({ success: false, message: "You do not have permission to delete records." });
     }
     const fee = await Fee.findById(req.params.id);
-    if (!fee) return res.status(404).json({ success: false, message: "Record nahi mila." });
-    if (fee.payments?.length) return res.status(400).json({ success: false, message: "Payment history wale bill ko delete nahi kar sakte." });
+    if (!fee) return res.status(404).json({ success: false, message: "Record not found." });
+    if (fee.payments?.length) return res.status(400).json({ success: false, message: "A bill with payment history cannot be deleted." });
     await fee.deleteOne();
-    res.status(200).json({ success: true, message: "Fee record delete ho gaya." });
+    res.status(200).json({ success: true, message: "Fee record deleted." });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -284,9 +284,9 @@ router.delete("/fees/:id", auth, async (req, res) => {
 
 router.get("/fee-structures", auth, async (req, res) => {
   try {
-    if (!canManageFees(req.user)) return res.status(403).json({ success: false, message: "Permission nahi hai." });
+    if (!canManageFees(req.user)) return res.status(403).json({ success: false, message: "Permission denied." });
     const { academicSession, studentClass, stream = "" } = req.query;
-    if (!isValidAcademicSession(academicSession) || !studentClass) return res.status(400).json({ success: false, message: "Session aur class required hain." });
+    if (!isValidAcademicSession(academicSession) || !studentClass) return res.status(400).json({ success: false, message: "A session and class are required." });
     const structure = await FeeStructure.findOne({ academicSession, class: studentClass, stream });
     res.json({ success: true, structure });
   } catch (error) {
@@ -296,46 +296,46 @@ router.get("/fee-structures", auth, async (req, res) => {
 
 router.put("/fee-structures", auth, async (req, res) => {
   try {
-    if (!canManageFees(req.user)) return res.status(403).json({ success: false, message: "Permission nahi hai." });
+    if (!canManageFees(req.user)) return res.status(403).json({ success: false, message: "Permission denied." });
     const { academicSession, studentClass, stream = "", items = [] } = req.body;
-    if (!isValidAcademicSession(academicSession) || !studentClass) return res.status(400).json({ success: false, message: "Valid session aur class select karein." });
-    if (!Array.isArray(items) || !items.length) return res.status(400).json({ success: false, message: "Kam se kam ek fee item add karein." });
+    if (!isValidAcademicSession(academicSession) || !studentClass) return res.status(400).json({ success: false, message: "Select a valid session and class." });
+    if (!Array.isArray(items) || !items.length) return res.status(400).json({ success: false, message: "Add at least one fee item." });
     const cleanItems = items.map((item) => ({ feeType: String(item.feeType || "").trim(), amount: Number(item.amount), frequency: item.frequency, months: item.frequency === "Monthly" ? Math.min(12, Math.max(1, Number(item.months || 12))) : 1 }));
-    if (cleanItems.some((item) => !item.feeType || !Number.isFinite(item.amount) || item.amount <= 0)) return res.status(400).json({ success: false, message: "Har fee type aur valid amount required hai." });
+    if (cleanItems.some((item) => !item.feeType || !Number.isFinite(item.amount) || item.amount <= 0)) return res.status(400).json({ success: false, message: "Each fee item requires a fee type and valid amount." });
     const structure = await FeeStructure.findOneAndUpdate(
       { academicSession, class: studentClass, stream },
       { $set: { items: cleanItems, updatedBy: req.user.id } },
       { new: true, upsert: true, runValidators: true },
     );
-    res.json({ success: true, message: "Class fee setup save ho gaya.", structure });
+    res.json({ success: true, message: "Class fee setup saved.", structure });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.code === 11000 ? "Is class ka fee setup already exists." : error.message });
+    res.status(500).json({ success: false, message: error.code === 11000 ? "A fee setup already exists for this class." : error.message });
   }
 });
 
 router.delete("/fee-structures", auth, async (req, res) => {
   try {
-    if (!canManageFees(req.user)) return res.status(403).json({ success: false, message: "Permission nahi hai." });
+    if (!canManageFees(req.user)) return res.status(403).json({ success: false, message: "Permission denied." });
     const { academicSession, studentClass, stream = "" } = req.query;
-    if (!isValidAcademicSession(academicSession) || !studentClass) return res.status(400).json({ success: false, message: "Session aur class required hain." });
+    if (!isValidAcademicSession(academicSession) || !studentClass) return res.status(400).json({ success: false, message: "A session and class are required." });
     const deleted = await FeeStructure.findOneAndDelete({ academicSession, class: studentClass, stream });
-    if (!deleted) return res.status(404).json({ success: false, message: "Saved fee setup nahi mila." });
-    res.json({ success: true, message: "Saved fee setup delete ho gaya. Ab naya setup bana sakte hain." });
+    if (!deleted) return res.status(404).json({ success: false, message: "Saved fee setup not found." });
+    res.json({ success: true, message: "Saved fee setup deleted. You can now create a new setup." });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
 router.post("/fees/generate", auth, async (req, res) => {
   try {
-    if (!canManageFees(req.user)) return res.status(403).json({ success: false, message: "Permission nahi hai." });
+    if (!canManageFees(req.user)) return res.status(403).json({ success: false, message: "Permission denied." });
     const { studentId, academicSession, month } = req.body;
-    if (!mongoose.Types.ObjectId.isValid(studentId) || !isValidAcademicSession(academicSession)) return res.status(400).json({ success: false, message: "Valid student aur session select karein." });
+    if (!mongoose.Types.ObjectId.isValid(studentId) || !isValidAcademicSession(academicSession)) return res.status(400).json({ success: false, message: "Select a valid student and session." });
     const studentDocument = await Student.findById(studentId);
-    if (!studentDocument) return res.status(404).json({ success: false, message: "Student nahi mila." });
+    if (!studentDocument) return res.status(404).json({ success: false, message: "Student not found." });
     const student = studentForSession(studentDocument, academicSession);
     const structure = await findFeeStructure({ academicSession, studentClass: student.class, stream: student.stream });
-    if (!structure) return res.status(404).json({ success: false, message: "Is class/session ka fee setup pehle save karein." });
-    if (structure.items.some((item) => item.frequency === "Monthly") && !/^\d{4}-\d{2}$/.test(month || "")) return res.status(400).json({ success: false, message: "Monthly fee ke liye month select karein." });
+    if (!structure) return res.status(404).json({ success: false, message: "Save the fee setup for this class and session first." });
+    if (structure.items.some((item) => item.frequency === "Monthly") && !/^\d{4}-\d{2}$/.test(month || "")) return res.status(400).json({ success: false, message: "Select a month for the monthly fee." });
     let created = 0;
     for (const item of structure.items) {
       const exists = await Fee.exists({ studentId, academicSession, feeStructureItemId: item._id });
@@ -356,7 +356,7 @@ router.post("/fees/generate", auth, async (req, res) => {
       });
       created += 1;
     }
-    res.json({ success: true, message: created ? `${created} fee demand generate ho gayi.` : "Is period ki fees pehle se generated hain.", created });
+    res.json({ success: true, message: created ? `Generated ${created} fee demands.` : "Fees for this period have already been generated.", created });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -364,11 +364,11 @@ router.post("/fees/generate", auth, async (req, res) => {
 
 router.get("/fees/student/:studentId/summary", auth, async (req, res) => {
   try {
-    if (!canManageFees(req.user)) return res.status(403).json({ success: false, message: "Permission nahi hai." });
+    if (!canManageFees(req.user)) return res.status(403).json({ success: false, message: "Permission denied." });
     const { academicSession } = req.query;
-    if (!mongoose.Types.ObjectId.isValid(req.params.studentId) || !isValidAcademicSession(academicSession)) return res.status(400).json({ success: false, message: "Valid student aur session required hain." });
+    if (!mongoose.Types.ObjectId.isValid(req.params.studentId) || !isValidAcademicSession(academicSession)) return res.status(400).json({ success: false, message: "A valid student and session are required." });
     const studentDocument = await Student.findById(req.params.studentId);
-    if (!studentDocument) return res.status(404).json({ success: false, message: "Student nahi mila." });
+    if (!studentDocument) return res.status(404).json({ success: false, message: "Student not found." });
     const student = studentForSession(studentDocument, academicSession);
     const records = (await Fee.find({ studentId: req.params.studentId, academicSession }).sort({ dueDate: 1, createdAt: 1 })).map(serializeFee);
     const paymentMap = new Map();
@@ -393,9 +393,9 @@ router.get("/fees/student/:studentId/summary", auth, async (req, res) => {
 });
 router.get("/fees/due-reminders", auth, async (req, res) => {
   try {
-    if (!canManageFees(req.user)) return res.status(403).json({ message: "Fee reminders dekhne ki permission nahi hai." });
+    if (!canManageFees(req.user)) return res.status(403).json({ message: "You do not have permission to view fee reminders." });
     const { academicSession, studentClass = "" } = req.query;
-    if (!isValidAcademicSession(academicSession)) return res.status(400).json({ message: "Valid academic session required hai." });
+    if (!isValidAcademicSession(academicSession)) return res.status(400).json({ message: "A valid academic session is required." });
     const query = { academicSession, ...(studentClass ? { class: studentClass } : {}) };
     const bills = await Fee.find(query).populate("studentId", "name fatherName admissionNo class phone").sort({ dueDate: 1 });
     const grouped = new Map();
@@ -406,9 +406,9 @@ router.get("/fees/due-reminders", auth, async (req, res) => {
       if (fee.dueDate && (!row.oldestDueDate || new Date(fee.dueDate) < new Date(row.oldestDueDate))) row.oldestDueDate = fee.dueDate;
       grouped.set(id, row);
     }
-    const reminders = [...grouped.values()].sort((a, b) => b.balance - a.balance).map((row) => ({ ...row, message: `Namaste, ${row.name} (Class ${row.class}) ki school fee â‚¹${Math.round(row.balance).toLocaleString("en-IN")} pending hai. Kripya school office me payment karein. Session: ${academicSession}.` }));
+    const reminders = [...grouped.values()].sort((a, b) => b.balance - a.balance).map((row) => ({ ...row, message: `Dear Parent, the school fee of ₹${Math.round(row.balance).toLocaleString("en-IN")} for ${row.name} (Class ${row.class}) is pending. Please pay at the school office. Session: ${academicSession}.` }));
     res.json({ reminders, totalDue: reminders.reduce((sum, row) => sum + row.balance, 0), studentsDue: reminders.length });
-  } catch (error) { res.status(500).json({ message: `Due reminders load nahi hue: ${error.message}` }); }
+  } catch (error) { res.status(500).json({ message: `Could not load due reminders: ${error.message}` }); }
 });
 module.exports = router;
 

@@ -18,7 +18,7 @@ export const studentIdFromScan = (value) => readStudentIdFromQr(value) || normal
 export const queueOfflineAttendance = ({ qrValue, operatorName }) => {
   const studentId = studentIdFromScan(qrValue);
   const student = getCachedStudents().find((item) => item.studentId === studentId);
-  if (!student) throw new Error(`Student ID ${studentId || "blank"} phone mein nahi mili. Online hokar students refresh karein.`);
+  if (!student) throw new Error(`Student ID ${studentId || "blank"} was not found on this phone. Go online and refresh students.`);
   const date = new Date().toLocaleDateString("en-CA");
   const queue = getOfflineQueue();
   if (queue.some((event) => event.studentId === studentId && event.localDate === date)) {

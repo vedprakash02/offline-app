@@ -26,7 +26,7 @@ export default function AdmitCard() {
       const response = await axios.get("http://localhost:3000/get-school-profile", { headers: headers() });
       setSchoolProfile(response.data);
     } catch (error) {
-      console.error("School profile load nahi hua:", error);
+      console.error("Could not load the school profile:", error);
     }
   };
 
@@ -38,13 +38,13 @@ export default function AdmitCard() {
 
   const loadStudents = async () => {
     if (!filters.class) {
-      return setStatus({ type: "error", text: "Pehle class select karein." });
+      return setStatus({ type: "error", text: "Select a class first." });
     }
     if (needsStream && !filters.stream) {
-      return setStatus({ type: "error", text: "11th/12th ke liye stream select karein." });
+      return setStatus({ type: "error", text: "Select a stream for Classes 11 and 12." });
     }
     if (!filters.examType) {
-      return setStatus({ type: "error", text: "Exam type select karein." });
+      return setStatus({ type: "error", text: "Select an exam type." });
     }
     setLoading(true);
     setStatus(null);
@@ -61,10 +61,10 @@ export default function AdmitCard() {
       setSchedule(timeTableResponse.data.schedule || {});
       setExamTimes(timeTableResponse.data.examTimes || {});
       if (!response.data.students?.length) {
-        setStatus({ type: "error", text: "Is class mein koi student nahi mila." });
+        setStatus({ type: "error", text: "No students were found in this class." });
       }
     } catch (error) {
-      setStatus({ type: "error", text: error.response?.data?.message || "Students load nahi hue." });
+      setStatus({ type: "error", text: error.response?.data?.message || "Could not load students." });
     } finally {
       setLoading(false);
     }
@@ -114,7 +114,7 @@ export default function AdmitCard() {
         <div>
           <span>EXAM ADMIT CARD</span>
           <h2>Generate Admit Cards</h2>
-          <p>Class-wise admit cards generate karein for students</p>
+          <p>Generate class-wise admit cards for students</p>
         </div>
         <div className="admit-card-session">
           <span>Academic Session</span>
@@ -170,7 +170,7 @@ export default function AdmitCard() {
         {students.length === 0 ? (
           <div className="admit-card-empty">
             <FiUsers />
-            <strong>Class aur exam select karke admit cards generate karein</strong>
+            <strong>Select a class and exam to generate admit cards</strong>
           </div>
         ) : (
           students.map((student, index) => (
@@ -206,7 +206,7 @@ export default function AdmitCard() {
 
               <section className="admit-card-timetable">
                 <h4>Exam Time Table</h4>
-                {scheduleRows.length ? <table><thead><tr><th>Date</th><th>Subject</th><th>Time</th></tr></thead><tbody>{scheduleRows.map(([date, row]) => <tr key={date}><td>{formatDate(date)}</td><td>{row[filters.class]}</td><td>{formatTime(timeForClass(filters.class)) || "—"}</td></tr>)}</tbody></table> : <p>Is exam ke liye time table abhi set nahi hua hai.</p>}
+                {scheduleRows.length ? <table><thead><tr><th>Date</th><th>Subject</th><th>Time</th></tr></thead><tbody>{scheduleRows.map(([date, row]) => <tr key={date}><td>{formatDate(date)}</td><td>{row[filters.class]}</td><td>{formatTime(timeForClass(filters.class)) || "—"}</td></tr>)}</tbody></table> : <p>The timetable for this exam has not been set yet.</p>}
               </section>
 
               <div className="admit-card-footer">

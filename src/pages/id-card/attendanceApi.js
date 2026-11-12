@@ -24,7 +24,7 @@ export const apiRequest = async (path, options = {}) => {
   }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const error = new Error(data.message || "Server request fail hui.");
+    const error = new Error(data.message || "Server request failed.");
     error.status = response.status;
     error.data = data;
     throw error;
@@ -71,14 +71,14 @@ export const syncQrAttendanceToMongo = async () => {
   const { events = [] } = await attendanceApi.getPendingMongoSync();
   if (!events.length) return { pending: 0, synced: 0, failed: 0 };
   const token = localStorage.getItem("token");
-  if (!token) throw new Error("ERP login token nahi mila.");
+  if (!token) throw new Error("ERP login token not found.");
   const response = await fetch("http://localhost:3000/attendance/qr-sync", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ events, academicSession: localStorage.getItem("activeSession") || "" }),
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.message || "Mongo attendance sync fail hui.");
+  if (!response.ok) throw new Error(data.message || "MongoDB attendance sync failed.");
   await attendanceApi.updateMongoSyncStatus(data.results || []);
   return { ...data, pending: Math.max(0, events.length - Number(data.synced || 0)) };
 };

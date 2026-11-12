@@ -18,8 +18,8 @@ const ExcelUpload = () => {
       ["Required columns", "username, email, role"],
       ["Allowed roles", "admin, principal, teacher, accountant, operator, student"],
       ["Teacher login", "Use role exactly as: teacher"],
-      ["Important", "Email unique hona chahiye. Header names ko change na karein."],
-      ["Signup", "Upload ke baad user isi email se signup/register kar sakta hai."],
+      ["Important", "Email must be unique. Do not change the header names."],
+      ["Signup", "After uploading, the user can sign up with this email."],
     ]);
     instructionsSheet["!cols"] = [{ wch: 22 }, { wch: 72 }];
     XLSX.utils.book_append_sheet(workbook, usersSheet, "Users");
@@ -35,7 +35,7 @@ const ExcelUpload = () => {
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     if (!file) {
-      alert("Kripya pehle ek Excel file select karein!");
+      alert("Select an Excel file first.");
       return;
     }
 
@@ -59,7 +59,7 @@ const ExcelUpload = () => {
       if (response.data.success) {
         setStatusMessage({
           type: "success",
-          text: response.data.message || "Excel data successfully upload ho gaya!"
+          text: response.data.message || "Excel data uploaded successfully."
         });
         setFile(null); // File field ko reset karne ke liye
         e.target.reset(); // HTML input field reset
@@ -68,7 +68,7 @@ const ExcelUpload = () => {
       console.error(error);
       setStatusMessage({
         type: "error",
-        text: error.response?.data?.message || "Excel processing me koi dikkat aayi."
+        text: error.response?.data?.message || "Could not process the Excel file."
       });
     } finally {
       setLoading(false);
@@ -81,7 +81,7 @@ const ExcelUpload = () => {
         Upload Master Users List
       </h2>
       <p style={{ fontSize: "14px", color: "var(--text)", marginBottom: "20px", textAlign: "center" }}>
-        Sirf wahi bache ya teachers portal par register/signup kar payenge jinki list aap yahan excel ke zariye upload karenge.
+        Only students or teachers included in the Excel list uploaded here will be able to register on the portal.
       </p>
 
       <button
@@ -93,7 +93,7 @@ const ExcelUpload = () => {
         Download Excel Template (.xlsx)
       </button>
       <p style={{ fontSize: "12px", color: "var(--text-soft)", marginBottom: "18px", textAlign: "center" }}>
-        Required columns: <strong>username, email, role</strong>. Naye teacher ke liye role me <strong>teacher</strong> likhein.
+        Required columns: <strong>username, email, role</strong>. For a new teacher, set the role to <strong>teacher</strong>.
       </p>
 
       <form onSubmit={handleFormSubmit} className="filter-panel" style={{ marginBottom: "0px" }}>

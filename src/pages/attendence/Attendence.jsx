@@ -60,7 +60,7 @@ export default function ClassAttendance() {
             type: "error",
             text:
               error.response?.data?.message ||
-              "Attendance register load nahi hua.",
+              "Could not load the attendance register.",
           });
       } finally {
         setLoading(false);
@@ -108,12 +108,12 @@ export default function ClassAttendance() {
       );
       setNotice({
         type: "success",
-        text: data.message || "Attendance save ho gayi.",
+        text: data.message || "Attendance saved.",
       });
     } catch (error) {
       setNotice({
         type: "error",
-        text: error.response?.data?.message || "Attendance save nahi hui.",
+        text: error.response?.data?.message || "Could not save attendance.",
       });
     } finally {
       setSaving(false);
@@ -129,8 +129,7 @@ export default function ClassAttendance() {
           <span>TEACHER PANEL</span>
           <h2>Manual Attendance</h2>
           <p>
-            MongoDB roster · QR aur manual entry ek hi unified register mein
-            save hoti hai.
+            MongoDB roster · QR scans and manual entries are saved in one unified register.
           </p>
         </div>
         <div className="ma-session">
@@ -216,7 +215,7 @@ export default function ClassAttendance() {
       <section className="ma-register">
         <div className="ma-table-wrap">
           {loading ? (
-            <div className="ma-empty">Register load ho raha hai...</div>
+            <div className="ma-empty">Loading register...</div>
           ) : visible.length ? (
             <table>
               <thead>
@@ -261,7 +260,7 @@ export default function ClassAttendance() {
             </table>
           ) : (
             <div className="ma-empty">
-              Class select karke MongoDB students load karein.
+              Select a class to load MongoDB students.
             </div>
           )}
         </div>
